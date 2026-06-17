@@ -1,0 +1,12 @@
+# Graphify temp files (these get regenerated)
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_manifest.json
+graphify-out/.graphify_labels.json
+graphify-out/.graphify_cache/
+graphify-out/cost.json
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
