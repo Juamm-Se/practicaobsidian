@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphify Core</title>
+    <title>Obsidian & Git Intelligence Center</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -20,62 +20,70 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <!-- vis.js para el grafo de Obsidian -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
     <style>
         /* ═══════════════════════════════════════════
-           THEME VARIABLES
+           THEME VARIABLES — Notion Clean Light / Deep Dark
            ═══════════════════════════════════════════ */
         :root {
-            --bg:          #09090b;
-            --bg-raised:   #0f0f12;
-            --bg-surface:  #18181b;
-            --bg-hover:    #1e1e22;
-            --bg-thead:    #141417;
-            --brd:         #27272a;
-            --brd-row:     #1f1f23;
-            --brd-col:     #1a1a1e;
-            --brd-light:   #3f3f46;
-            --text-1:      #fafafa;
-            --text-2:      #d4d4d8;
-            --text-3:      #a1a1aa;
-            --text-4:      #71717a;
-            --text-5:      #52525b;
-            --acc:         #6366f1;
-            --acc-light:   #818cf8;
-            --live:        #22c55e;
-            --sidebar-w:   240px;
-            --sidebar-cw:  56px;
-            --chat-user-bg: #4f46e5;
-            --chat-ai-bg:   #18181b;
-            --shadow-card:  0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.02);
-            --shadow-input: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 1px rgba(99,102,241,0.06);
+            --bg:            #09090b;
+            --bg-raised:     #0c0c0f;
+            --bg-surface:    #18181b;
+            --bg-hover:      #1e1e22;
+            --bg-thead:      #141417;
+            --brd:           #27272a;
+            --brd-row:       #1f1f23;
+            --brd-col:       #1a1a1e;
+            --brd-light:     #3f3f46;
+            --text-1:        #fafafa;
+            --text-2:        #e4e4e7;
+            --text-3:        #a1a1aa;
+            --text-4:        #71717a;
+            --text-5:        #52525b;
+            --acc:           #6366f1;
+            --acc-light:     #818cf8;
+            --live:          #22c55e;
+            --sidebar-w:     260px;
+            --sidebar-cw:    64px;
+            --chat-user-bg:  #4f46e5;
+            --chat-ai-bg:    #18181b;
+            --shadow-card:   0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02);
+            --shadow-input:  0 2px 8px rgba(0,0,0,0.3), 0 0 0 1px rgba(99,102,241,0.06);
+            --impact-alto:   #f87171;
+            --impact-medio:  #fbbf24;
+            --impact-bajo:   #4ade80;
         }
         .light {
-            --bg:          #ffffff;
-            --bg-raised:   #fafafa;
-            --bg-surface:  #f4f4f5;
-            --bg-hover:    #e4e4e7;
-            --bg-thead:    #f4f4f5;
-            --brd:         #e4e4e7;
-            --brd-row:     #f0f0f2;
-            --brd-col:     #e4e4e7;
-            --brd-light:   #d4d4d8;
-            --text-1:      #09090b;
-            --text-2:      #27272a;
-            --text-3:      #52525b;
-            --text-4:      #71717a;
-            --text-5:      #a1a1aa;
-            --acc:         #4f46e5;
-            --acc-light:   #6366f1;
-            --live:        #16a34a;
-            --chat-user-bg: #4f46e5;
-            --chat-ai-bg:   #f4f4f5;
-            --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --bg:            #ffffff;
+            --bg-raised:     #fafafa;
+            --bg-surface:    #f4f4f5;
+            --bg-hover:      #e4e4e7;
+            --bg-thead:      #f4f4f5;
+            --brd:           #e4e4e7;
+            --brd-row:       #f0f0f2;
+            --brd-col:       #e4e4e7;
+            --brd-light:     #d4d4d8;
+            --text-1:        #18181b;
+            --text-2:        #27272a;
+            --text-3:        #52525b;
+            --text-4:        #71717a;
+            --text-5:        #a1a1aa;
+            --acc:           #4f46e5;
+            --acc-light:     #6366f1;
+            --live:          #16a34a;
+            --chat-user-bg:  #4f46e5;
+            --chat-ai-bg:    #f4f4f5;
+            --shadow-card:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
             --shadow-input:  0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(99,102,241,0.04);
+            --impact-alto:   #dc2626;
+            --impact-medio:  #d97706;
+            --impact-bajo:   #16a34a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-2); overflow: hidden; height: 100vh; transition: background 0.25s, color 0.25s; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-2); overflow: hidden; height: 100vh; transition: background 0.3s ease, color 0.3s ease; }
 
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -84,61 +92,49 @@
         @keyframes pulse-live { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(1.8)} }
         .live-pulse { animation: pulse-live 2s ease-in-out infinite; }
 
-        @keyframes slide-in { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes row-flash { 0%{background:rgba(99,102,241,0.10)} 100%{background:transparent} }
-        .row-enter { animation: slide-in 0.3s cubic-bezier(0.16,1,0.3,1) forwards, row-flash 2s ease-out forwards; }
+        @keyframes slide-in { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes row-flash { 0%{background:rgba(99,102,241,0.12)} 100%{background:transparent} }
+        .row-enter { animation: slide-in 0.35s cubic-bezier(0.16,1,0.3,1) forwards, row-flash 2.5s ease-out forwards; }
 
-        @keyframes fade-up { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-        .msg-enter { animation: fade-up 0.25s ease-out forwards; }
+        @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .msg-enter { animation: fade-up 0.3s ease-out forwards; }
 
         /* ── Sidebar ──────────────────────────────── */
-        .sidebar { width:var(--sidebar-w); min-width:var(--sidebar-w); transition:width 0.28s cubic-bezier(0.16,1,0.3,1), min-width 0.28s cubic-bezier(0.16,1,0.3,1); background:var(--bg-raised); border-right:1px solid var(--brd); display:flex; flex-direction:column; }
+        .sidebar { width:var(--sidebar-w); min-width:var(--sidebar-w); transition:width 0.3s cubic-bezier(0.16,1,0.3,1), min-width 0.3s cubic-bezier(0.16,1,0.3,1); background:var(--bg-raised); border-right:1px solid var(--brd); display:flex; flex-direction:column; }
         .sidebar.collapsed { width:var(--sidebar-cw); min-width:var(--sidebar-cw); }
-        .sidebar.collapsed .nav-label, .sidebar.collapsed .logo-text, .sidebar.collapsed .sse-label { display:none; }
+        .sidebar.collapsed .nav-label, .sidebar.collapsed .logo-text, .sidebar.collapsed .sse-label, .sidebar.collapsed .section-label { display:none; }
         .sidebar.collapsed .nav-item { justify-content:center; padding-left:0; padding-right:0; }
         .sidebar.collapsed .collapse-icon { transform:rotate(180deg); }
-        .nav-item { display:flex; align-items:center; gap:10px; padding:9px 14px; border-radius:8px; font-size:13px; font-weight:500; color:var(--text-3); cursor:pointer; transition:all 0.15s; border-left:2px solid transparent; margin:0 8px; }
+        .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; font-size:13.5px; font-weight:500; color:var(--text-3); cursor:pointer; transition:all 0.15s; border-left:2px solid transparent; margin:1px 10px; }
         .nav-item:hover { color:var(--text-1); background:var(--bg-hover); }
         .nav-item.active { color:var(--acc-light); background:rgba(99,102,241,0.08); border-left-color:var(--acc); }
 
         /* ── Badges ───────────────────────────────── */
-        .badge-blue   { background:rgba(59,130,246,0.10);  color:#60a5fa; border:1px solid rgba(59,130,246,0.18); }
-        .badge-violet { background:rgba(139,92,246,0.10);  color:#a78bfa; border:1px solid rgba(139,92,246,0.18); }
-        .badge-green  { background:rgba(34,197,94,0.10);   color:#4ade80; border:1px solid rgba(34,197,94,0.18); }
-        .badge-amber  { background:rgba(245,158,11,0.10);  color:#fbbf24; border:1px solid rgba(245,158,11,0.18); }
-        .badge-rose   { background:rgba(244,63,94,0.10);   color:#fb7185; border:1px solid rgba(244,63,94,0.18); }
-        .light .badge-blue   { background:rgba(59,130,246,0.08);  color:#2563eb; border-color:rgba(59,130,246,0.20); }
-        .light .badge-violet { background:rgba(139,92,246,0.08);  color:#7c3aed; border-color:rgba(139,92,246,0.20); }
-        .light .badge-green  { background:rgba(34,197,94,0.08);   color:#16a34a; border-color:rgba(34,197,94,0.20); }
-        .light .badge-amber  { background:rgba(245,158,11,0.08);  color:#d97706; border-color:rgba(245,158,11,0.20); }
-        .light .badge-rose   { background:rgba(244,63,94,0.08);   color:#e11d48; border-color:rgba(244,63,94,0.20); }
+        .badge-impact-alto  { background:rgba(248,113,113,0.10); color:var(--impact-alto); border:1px solid rgba(248,113,113,0.20); }
+        .badge-impact-medio { background:rgba(251,191,36,0.10);  color:var(--impact-medio); border:1px solid rgba(251,191,36,0.20); }
+        .badge-impact-bajo  { background:rgba(74,222,128,0.10);  color:var(--impact-bajo); border:1px solid rgba(74,222,128,0.20); }
 
-        /* ── LED ──────────────────────────────────── */
-        @keyframes led-glow { 0%,100%{box-shadow:0 0 3px 1px currentColor} 50%{box-shadow:0 0 7px 2px currentColor} }
+        /* ── LEDs ─────────────────────────────────── */
+        @keyframes led-glow { 0%,100%{box-shadow:0 0 3px 1px currentColor} 50%{box-shadow:0 0 8px 2px currentColor} }
         .led { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-        .led-alto  { background:#f87171; color:#f87171; animation:led-glow 2.5s ease-in-out infinite; }
-        .led-medio { background:#eab308; color:#eab308; animation:led-glow 2.5s ease-in-out infinite; }
-        .led-bajo  { background:#22c55e; color:#22c55e; animation:led-glow 2.5s ease-in-out infinite; }
+        .led-alto  { background:var(--impact-alto);  color:var(--impact-alto);  animation:led-glow 2s ease-in-out infinite; }
+        .led-medio { background:var(--impact-medio); color:var(--impact-medio); animation:led-glow 2s ease-in-out infinite; }
+        .led-bajo  { background:var(--impact-bajo);  color:var(--impact-bajo);  animation:led-glow 2s ease-in-out infinite; }
 
         /* ── Avatars ──────────────────────────────── */
         .avatar-grad-0{background:linear-gradient(135deg,#6366f1,#8b5cf6)} .avatar-grad-1{background:linear-gradient(135deg,#3b82f6,#6366f1)}
         .avatar-grad-2{background:linear-gradient(135deg,#10b981,#34d399)} .avatar-grad-3{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
-        .avatar-grad-4{background:linear-gradient(135deg,#ef4444,#f9716)} .avatar-grad-5{background:linear-gradient(135deg,#ec4899,#f472b6)}
+        .avatar-grad-4{background:linear-gradient(135deg,#ef4444,#f9716)}  .avatar-grad-5{background:linear-gradient(135deg,#ec4899,#f472b6)}
         .avatar-grad-6{background:linear-gradient(135deg,#14b8a6,#2dd4bf)} .avatar-grad-7{background:linear-gradient(135deg,#8b5cf6,#c084fc)}
 
         /* ── Typing ───────────────────────────────── */
-        @keyframes typing-bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-3px)} }
+        @keyframes typing-bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-4px)} }
         .typing-dot { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--acc); animation:typing-bounce 1.4s infinite; }
         .typing-dot:nth-child(2){animation-delay:.15s} .typing-dot:nth-child(3){animation-delay:.3s}
 
-        .graph-iframe { border:none; width:100%; height:100%; border-radius:10px; }
-
-        .sse-dot { width:6px; height:6px; border-radius:50%; transition:background 0.3s; flex-shrink:0; }
+        /* ── SSE dot ──────────────────────────────── */
+        .sse-dot { width:7px; height:7px; border-radius:50%; transition:background 0.3s; flex-shrink:0; }
         .sse-on{background:var(--live)} .sse-off{background:#ef4444} .sse-wait{background:#f59e0b;animation:pulse-live 1s ease-in-out infinite}
-
-        .filter-card { background:var(--bg-raised); border:1px solid var(--brd); border-radius:10px; padding:12px 14px; transition:border-color 0.2s, box-shadow 0.2s; }
-        .filter-card:hover { border-color:var(--brd-light); }
-        .filter-card:focus-within { border-color:rgba(99,102,241,0.30); box-shadow:0 0 0 1px rgba(99,102,241,0.08); }
 
         /* ── Table Card ───────────────────────────── */
         .table-card { background:var(--bg-raised); border:1px solid var(--brd); border-radius:12px; overflow:hidden; box-shadow:var(--shadow-card); }
@@ -146,26 +142,58 @@
         .table-row:hover { background:var(--bg-hover); }
         .table-cell-border { border-right:1px solid var(--brd-col); }
 
-        /* ── Select ───────────────────────────────── */
-        select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
-
-        .theme-btn { width:36px; height:36px; border-radius:10px; border:1px solid var(--brd); background:var(--bg-surface); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; color:var(--text-3); }
+        /* ── Theme Button ─────────────────────────── */
+        .theme-btn { width:38px; height:38px; border-radius:10px; border:1px solid var(--brd); background:var(--bg-surface); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; color:var(--text-3); }
         .theme-btn:hover { border-color:var(--acc); color:var(--acc-light); background:rgba(99,102,241,0.06); }
 
-        /* ── Graph Monitor Frame ──────────────────── */
-        .graph-frame { background:#000; border:1px solid var(--brd); border-radius:14px; overflow:hidden; box-shadow:var(--shadow-card), inset 0 0 40px rgba(0,0,0,0.4); }
+        /* ── Obsidian Graph Frame ─────────────────── */
+        .graph-frame { background:#0a0a0b; border:1px solid var(--brd); border-radius:14px; overflow:hidden; box-shadow:var(--shadow-card), inset 0 0 60px rgba(0,0,0,0.5); }
+        .light .graph-frame { background:#fafafa; box-shadow:var(--shadow-card); }
+        /* vis.js necesita dimensiones explícitas en el contenedor */
+        #graph-container { width: 100%; height: 100%; min-height: 400px; }
+
+        /* ── Note Detail Panel ───────────────────── */
+        .graph-layout { display: flex; width: 100%; height: 100%; overflow: hidden; }
+        .graph-canvas-area { flex: 1; min-width: 0; transition: flex 0.35s cubic-bezier(0.16,1,0.3,1); }
+        .note-panel { width: 0; min-width: 0; opacity: 0; overflow: hidden; transition: width 0.35s cubic-bezier(0.16,1,0.3,1), min-width 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.25s ease; border-left: 0px solid var(--brd); display: flex; flex-direction: column; background: var(--bg-raised); }
+        .note-panel.open { width: 420px; min-width: 420px; opacity: 1; border-left-width: 1px; }
+        .note-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--brd); flex-shrink: 0; }
+        .note-panel-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--brd); background: var(--bg-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; color: var(--text-4); flex-shrink: 0; }
+        .note-panel-close:hover { border-color: var(--acc); color: var(--acc-light); background: rgba(99,102,241,0.06); }
+        .note-panel-body { flex: 1; overflow-y: auto; padding: 20px 24px; min-height: 0; }
+        .note-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-1); line-height: 1.3; margin-bottom: 16px; }
+        .note-content { font-size: 13.5px; line-height: 1.75; color: var(--text-2); white-space: pre-wrap; word-break: break-word; }
+        .note-content h1, .note-content h2, .note-content h3 { color: var(--text-1); margin-top: 20px; margin-bottom: 8px; }
+        .note-content h1 { font-size: 18px; font-weight: 700; }
+        .note-content h2 { font-size: 15px; font-weight: 600; }
+        .note-content h3 { font-size: 14px; font-weight: 600; }
+        .note-content strong { color: var(--text-1); font-weight: 600; }
+        .note-content code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; background: rgba(99,102,241,0.08); color: var(--acc-light); padding: 1px 6px; border-radius: 4px; }
+        .note-content ul, .note-content ol { padding-left: 20px; margin: 6px 0; }
+        .note-content li { margin: 3px 0; }
+        .note-panel-loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--text-4); }
+        .note-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 600; background: rgba(99,102,241,0.08); color: var(--acc-light); border: 1px solid rgba(99,102,241,0.15); }
 
         /* ── Chat ─────────────────────────────────── */
         .chat-container { display:flex; flex-direction:column; height:100%; max-width:780px; margin:0 auto; width:100%; }
         .chat-input-wrap { background:var(--bg-raised); border:1px solid var(--brd); border-radius:16px; box-shadow:var(--shadow-input); transition:border-color 0.2s, box-shadow 0.2s; }
         .chat-input-wrap:focus-within { border-color:rgba(99,102,241,0.35); box-shadow:0 4px 16px rgba(0,0,0,0.15), 0 0 0 2px rgba(99,102,241,0.10); }
-        .chat-bubble-user { background:var(--chat-user-bg); color:#fff; border-radius:16px 16px 4px 16px; padding:10px 16px; max-width:80%; }
-        .chat-bubble-ai { background:var(--chat-ai-bg); border:1px solid var(--brd); border-radius:16px 16px 16px 4px; padding:10px 16px; max-width:85%; }
+        .chat-bubble-user { background:var(--chat-user-bg); color:#fff; border-radius:18px 18px 4px 18px; padding:11px 18px; max-width:80%; }
+        .chat-bubble-ai { background:var(--chat-ai-bg); border:1px solid var(--brd); border-radius:18px 18px 18px 4px; padding:11px 18px; max-width:85%; }
         .light .chat-bubble-ai { background:#f4f4f5; }
 
-        /* ── Suggestion Chips ─────────────────────── */
-        .chip { display:inline-flex; align-items:center; gap:4px; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:500; border:1px solid var(--brd); background:var(--bg-surface); color:var(--text-3); cursor:pointer; transition:all 0.18s; }
+        /* ── Chips ────────────────────────────────── */
+        .chip { display:inline-flex; align-items:center; gap:5px; padding:7px 15px; border-radius:20px; font-size:12px; font-weight:500; border:1px solid var(--brd); background:var(--bg-surface); color:var(--text-3); cursor:pointer; transition:all 0.18s; }
         .chip:hover { border-color:var(--acc); color:var(--acc-light); background:rgba(99,102,241,0.06); }
+
+        /* ── Empty State ──────────────────────────── */
+        .empty-state-icon { width:72px; height:72px; border-radius:20px; display:flex; align-items:center; justify-content:center; border:1px solid var(--brd); background:var(--bg-surface); margin-bottom:24px; }
+
+        /* ── Filter Cards ─────────────────────────── */
+        .filter-card { background:var(--bg-raised); border:1px solid var(--brd); border-radius:10px; padding:12px 14px; transition:border-color 0.2s, box-shadow 0.2s; }
+        .filter-card:hover { border-color:var(--brd-light); }
+        .filter-card:focus-within { border-color:rgba(99,102,241,0.30); box-shadow:0 0 0 1px rgba(99,102,241,0.08); }
+        select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 
         .dark input[type="date"]{color-scheme:dark} .light input[type="date"]{color-scheme:light}
     </style>
@@ -174,49 +202,59 @@
 <body class="flex h-screen">
 
     <!-- ╔══════════════════════════════════════════╗
-         ║  SIDEBAR IZQUIERDO                       ║
+         ║  SIDEBAR IZQUIERDO — Estilo Notion      ║
          ╚══════════════════════════════════════════╝ -->
     <aside class="sidebar" id="sidebar">
-        <div class="flex items-center justify-between h-14 px-4 border-b" style="border-color:var(--brd)">
+        <!-- Logo -->
+        <div class="flex items-center justify-between h-[56px] px-4 border-b" style="border-color:var(--brd)">
             <div class="flex items-center gap-2.5 overflow-hidden">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(99,102,241,0.12)">
-                    <i data-lucide="zap" class="w-4 h-4" style="color:var(--acc-light)"></i>
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.15))">
+                    <i data-lucide="hexagon" class="w-[18px] h-[18px]" style="color:var(--acc-light)"></i>
                 </div>
                 <div class="logo-text min-w-0">
-                    <p class="text-[13px] font-semibold tracking-[-0.02em] truncate" style="color:var(--text-1)">Graphify</p>
-                    <p class="text-[9px] font-mono" style="color:var(--text-5)">Core v3.0</p>
+                    <p class="text-[13px] font-semibold tracking-[-0.02em] truncate" style="color:var(--text-1)">Obsidian & Git</p>
+                    <p class="text-[9px] font-mono" style="color:var(--text-5)">Intelligence Center</p>
                 </div>
             </div>
             <button onclick="toggleSidebar()" class="w-7 h-7 rounded-md flex items-center justify-center transition-all flex-shrink-0 hover:opacity-80" style="color:var(--text-4)">
-                <i data-lucide="panel-left-close" class="w-4 h-4 collapse-icon" style="transition:transform 0.28s"></i>
+                <i data-lucide="panel-left-close" class="w-4 h-4 collapse-icon" style="transition:transform 0.3s"></i>
             </button>
         </div>
-        <nav class="flex-1 flex flex-col pt-3 gap-0.5 overflow-y-auto overflow-x-hidden">
-            <div class="px-4 mb-1.5"><p class="text-[9px] uppercase tracking-[0.1em] font-semibold nav-label" style="color:var(--text-5)">Navegación</p></div>
-            <button onclick="navigate('tabla')" id="nav-tabla" class="nav-item active" title="Actividad en Vivo">
-                <i data-lucide="activity" class="w-[18px] h-[18px] flex-shrink-0"></i><span class="nav-label truncate">Actividad en Vivo</span>
+
+        <!-- Navigation -->
+        <nav class="flex-1 flex flex-col pt-4 gap-0.5 overflow-y-auto overflow-x-hidden">
+            <div class="px-5 mb-2"><p class="section-label text-[9px] uppercase tracking-[0.12em] font-semibold" style="color:var(--text-5)">Secciones</p></div>
+            <button onclick="navigate('activity')" id="nav-activity" class="nav-item active" title="Actividad en Vivo">
+                <i data-lucide="radio" class="w-[18px] h-[18px] flex-shrink-0"></i><span class="nav-label truncate">Actividad en Vivo</span>
             </button>
-            <button onclick="navigate('graph')" id="nav-graph" class="nav-item" title="Ver Grafo Real">
-                <i data-lucide="share-2" class="w-[18px] h-[18px] flex-shrink-0"></i><span class="nav-label truncate">Ver Grafo Real</span>
+            <button onclick="navigate('graph')" id="nav-graph" class="nav-item" title="Grafo de Obsidian">
+                <i data-lucide="share-2" class="w-[18px] h-[18px] flex-shrink-0"></i><span class="nav-label truncate">Grafo de Obsidian</span>
             </button>
             <button onclick="navigate('chat')" id="nav-chat" class="nav-item" title="Asistente IA">
                 <i data-lucide="sparkles" class="w-[18px] h-[18px] flex-shrink-0"></i><span class="nav-label truncate">Asistente IA</span>
             </button>
-            <div class="my-3 mx-4" style="border-top:1px solid var(--brd)"></div>
-            <div class="px-4 mb-1.5"><p class="text-[9px] uppercase tracking-[0.1em] font-semibold nav-label" style="color:var(--text-5)">Sistema</p></div>
+
+            <div class="my-4 mx-5" style="border-top:1px solid var(--brd)"></div>
+            <div class="px-5 mb-2"><p class="section-label text-[9px] uppercase tracking-[0.12em] font-semibold" style="color:var(--text-5)">Sistema</p></div>
             <div class="nav-item" style="cursor:default">
                 <span class="sse-dot sse-wait flex-shrink-0" id="sse-dot"></span>
-                <span class="nav-label text-[11px]" style="color:var(--text-4)" id="sse-label">Conectando...</span>
+                <span class="nav-label sse-label text-[11px]" style="color:var(--text-4)" id="sse-label">Conectando SSE...</span>
+            </div>
+            <div class="nav-item" style="cursor:default">
+                <i data-lucide="database" class="w-[16px] h-[16px] flex-shrink-0" style="color:var(--text-5)"></i>
+                <span class="nav-label text-[11px]" style="color:var(--text-4)" id="vault-status">Vault: —</span>
             </div>
         </nav>
-        <div class="flex items-center justify-between px-3 py-3 border-t" style="border-color:var(--brd)">
+
+        <!-- Bottom -->
+        <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:var(--brd)">
             <button onclick="toggleTheme()" class="theme-btn" id="theme-btn" title="Cambiar tema">
-                <i data-lucide="sun" class="w-4 h-4" id="theme-icon-sun" style="display:none"></i>
-                <i data-lucide="moon" class="w-4 h-4" id="theme-icon-moon"></i>
+                <i data-lucide="sun" class="w-[18px] h-[18px]" id="theme-icon-sun" style="display:none"></i>
+                <i data-lucide="moon" class="w-[18px] h-[18px]" id="theme-icon-moon"></i>
             </button>
             <div class="flex items-center gap-2.5 nav-label overflow-hidden">
-                <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-semibold flex-shrink-0" style="background:rgba(99,102,241,0.15);color:var(--acc-light)">U</div>
-                <span class="text-[11px] font-medium truncate" style="color:var(--text-3)">Usuario</span>
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white">JM</div>
+                <span class="text-[11px] font-medium truncate" style="color:var(--text-3)">Juan Mora</span>
             </div>
         </div>
     </aside>
@@ -227,9 +265,9 @@
     <div class="flex-1 flex flex-col min-w-0">
 
         <!-- Topbar -->
-        <header class="h-12 flex-shrink-0 border-b flex items-center justify-between px-6" style="background:var(--bg-raised);border-color:var(--brd)">
+        <header class="h-[52px] flex-shrink-0 border-b flex items-center justify-between px-7" style="background:var(--bg-raised);border-color:var(--brd)">
             <div class="flex items-center gap-4">
-                <h1 id="page-title" class="text-[14px] font-semibold tracking-[-0.02em]" style="color:var(--text-1)">Trazabilidad de Cambios</h1>
+                <h1 id="page-title" class="text-[15px] font-semibold tracking-[-0.02em]" style="color:var(--text-1)">Actividad en Vivo</h1>
                 <div id="live-badge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.15)">
                     <span class="live-pulse w-[5px] h-[5px] rounded-full" style="background:var(--live)"></span>
                     <span class="text-[10px] font-medium tracking-wide" style="color:var(--live)">Tiempo Real</span>
@@ -238,128 +276,173 @@
             <span id="clock" class="text-[10px] font-mono tabular-nums" style="color:var(--text-4)"></span>
         </header>
 
-        <!-- Content -->
+        <!-- Content Area -->
         <div class="flex-1 overflow-hidden relative">
 
-            <!-- ═══════ VISTA: TABLA ═══════ -->
-            <div id="view-tabla" class="absolute inset-0 flex flex-col overflow-hidden">
+            <!-- ═══════════════════════════════════════
+                 VISTA: ACTIVIDAD EN VIVO (Commits)
+                 ═══════════════════════════════════════ -->
+            <div id="view-activity" class="absolute inset-0 flex flex-col overflow-hidden">
                 <!-- Filtros -->
-                <div class="flex-shrink-0 px-6 pt-5 pb-3">
+                <div class="flex-shrink-0 px-7 pt-5 pb-3">
                     <div class="grid grid-cols-3 gap-3">
                         <div class="filter-card">
                             <label class="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.08em] font-semibold mb-2" style="color:var(--text-5)">
-                                <i data-lucide="folder" class="w-3 h-3"></i> Filtrar Proyecto
+                                <i data-lucide="git-branch" class="w-3 h-3"></i> Repositorio
                             </label>
-                            <select id="filter-project" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)"><option value="">Todos los proyectos</option></select>
+                            <select id="filter-repo" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)"><option value="">Todos los repos</option></select>
                         </div>
                         <div class="filter-card">
                             <label class="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.08em] font-semibold mb-2" style="color:var(--text-5)">
-                                <i data-lucide="user" class="w-3 h-3"></i> Filtrar Desarrollador
+                                <i data-lucide="user" class="w-3 h-3"></i> Autor
                             </label>
-                            <select id="filter-developer" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)"><option value="">Todos los desarrolladores</option></select>
+                            <select id="filter-author" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)"><option value="">Todos los autores</option></select>
                         </div>
                         <div class="filter-card">
                             <label class="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.08em] font-semibold mb-2" style="color:var(--text-5)">
-                                <i data-lucide="calendar" class="w-3 h-3"></i> Rango de Fecha
+                                <i data-lucide="signal" class="w-3 h-3"></i> Impacto
                             </label>
-                            <div class="flex items-center gap-2">
-                                <input id="filter-date-from" type="date" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)" />
-                                <span class="text-[10px] font-medium" style="color:var(--text-5)">→</span>
-                                <input id="filter-date-to" type="date" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)" />
-                            </div>
+                            <select id="filter-impact" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)">
+                                <option value="">Todos</option>
+                                <option value="Alto">Alto</option>
+                                <option value="Medio">Medio</option>
+                                <option value="Bajo">Bajo</option>
+                            </select>
                         </div>
                     </div>
                 </div>
+
                 <!-- Tabla -->
-                <div class="flex-1 px-6 pb-5 overflow-hidden flex flex-col">
+                <div class="flex-1 px-7 pb-5 overflow-hidden flex flex-col">
                     <div class="table-card flex-1 flex flex-col min-h-0">
-                        <div class="flex-shrink-0 px-5 py-2.5 flex items-center justify-between border-b" style="border-color:var(--brd)">
+                        <div class="flex-shrink-0 px-5 py-3 flex items-center justify-between border-b" style="border-color:var(--brd)">
                             <div class="flex items-center gap-2">
-                                <i data-lucide="git-branch" class="w-3.5 h-3.5" style="color:var(--text-4)"></i>
-                                <span class="text-[11px] font-semibold" style="color:var(--text-3)">Commits en Tiempo Real</span>
+                                <i data-lucide="git-commit-horizontal" class="w-4 h-4" style="color:var(--text-4)"></i>
+                                <span class="text-[12px] font-semibold" style="color:var(--text-3)">Commits en Tiempo Real</span>
                             </div>
                             <div class="flex items-center gap-4">
-                                <span class="text-[10px] font-mono font-medium" style="color:var(--text-5)"><span id="activity-count">0</span> commits</span>
-                                <button onclick="clearActivity()" class="text-[10px] px-2 py-1 rounded-md font-medium transition-colors" style="color:var(--text-5)">Limpiar</button>
+                                <span class="text-[10px] font-mono font-medium" style="color:var(--text-5)"><span id="commit-count">0</span> commits</span>
+                                <button onclick="clearCommits()" class="text-[10px] px-2.5 py-1 rounded-md font-medium transition-colors hover:opacity-80" style="color:var(--text-5);border:1px solid var(--brd)">Limpiar</button>
                             </div>
                         </div>
                         <div class="flex-1 overflow-y-auto min-h-0" id="table-scroll">
+                            <!-- Empty State -->
                             <div id="empty-state" class="flex flex-col items-center justify-center h-full text-center px-6">
-                                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border" style="background:var(--bg-surface);border-color:var(--brd)">
-                                    <i data-lucide="git-pull-request" class="w-7 h-7" style="color:var(--text-5)"></i>
+                                <div class="empty-state-icon">
+                                    <i data-lucide="github" class="w-8 h-8" style="color:var(--text-5)"></i>
                                 </div>
-                                <p class="text-[14px] font-semibold mb-2" style="color:var(--text-2)">Esperando pushes reales en tu repositorio de GitHub...</p>
-                                <p class="text-[12px] max-w-md leading-relaxed mb-6" style="color:var(--text-4)">Configura un webhook en tu repositorio. Los commits aparecerán aquí al instante.</p>
-                                <div class="rounded-xl p-4 text-left max-w-xl w-full border" style="background:var(--bg-surface);border-color:var(--brd)">
-                                    <p class="text-[9px] uppercase tracking-wider font-semibold mb-2" style="color:var(--text-5)">GitHub → Settings → Webhooks:</p>
-                                    <code class="text-[11px] font-mono leading-[1.8] block whitespace-pre-wrap" style="color:var(--text-3)">Payload URL:  http://tu-servidor:8000/api/webhook/github
+                                <p class="text-[16px] font-semibold mb-2" style="color:var(--text-2)">Esperando commits reales de GitHub...</p>
+                                <p class="text-[13px] max-w-lg leading-relaxed mb-6" style="color:var(--text-4)">Cuando hagas <code class="font-mono text-[12px] px-1.5 py-0.5 rounded" style="background:var(--bg-surface);color:var(--acc-light)">git push</code>, los commits aparecerán aquí en tiempo real vía webhook.</p>
+                                <div class="rounded-xl p-5 text-left max-w-xl w-full border" style="background:var(--bg-surface);border-color:var(--brd)">
+                                    <p class="text-[9px] uppercase tracking-wider font-semibold mb-3" style="color:var(--text-5)">Configurar Webhook en GitHub</p>
+                                    <code class="text-[11px] font-mono leading-[2] block whitespace-pre-wrap" style="color:var(--text-3)">Payload URL:  https://tu-ngrok-url/api/webhook/github
 Content type: application/json
+Secret:       (opcional)
 Events:       Just the push event</code>
                                 </div>
                             </div>
-                            <table class="w-full hidden" id="activity-table">
+                            <!-- Tabla de Commits -->
+                            <table class="w-full hidden" id="commit-table">
                                 <thead class="sticky top-0 z-10">
                                     <tr style="background:var(--bg-thead); border-bottom:1px solid var(--brd)">
-                                        <th class="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border w-[190px]" style="color:var(--text-4);background:var(--bg-thead)">Desarrollador</th>
-                                        <th class="text-left py-3 px-3 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border w-[140px]" style="color:var(--text-4);background:var(--bg-thead)">Proyecto</th>
-                                        <th class="text-left py-3 px-3 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border" style="color:var(--text-4);background:var(--bg-thead)">Commit</th>
-                                        <th class="text-left py-3 px-3 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border w-[75px]" style="color:var(--text-4);background:var(--bg-thead)">Hora</th>
-                                        <th class="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-[0.06em] w-[85px]" style="color:var(--text-4);background:var(--bg-thead)">Impacto</th>
+                                        <th class="text-left py-3 px-5 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border w-[200px]" style="color:var(--text-4);background:var(--bg-thead)">Autor</th>
+                                        <th class="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border w-[130px]" style="color:var(--text-4);background:var(--bg-thead)">Repositorio</th>
+                                        <th class="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border" style="color:var(--text-4);background:var(--bg-thead)">Mensaje de Commit</th>
+                                        <th class="text-left py-3 px-4 font-semibold text-[10px] uppercase tracking-[0.06em] table-cell-border w-[80px]" style="color:var(--text-4);background:var(--bg-thead)">Hora</th>
+                                        <th class="text-left py-3 px-5 font-semibold text-[10px] uppercase tracking-[0.06em] w-[100px]" style="color:var(--text-4);background:var(--bg-thead)">Impacto</th>
                                     </tr>
                                 </thead>
-                                <tbody id="activity-body"></tbody>
+                                <tbody id="commit-body"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ═══════ VISTA: GRAFO ═══════ -->
+            <!-- ═══════════════════════════════════════
+                 VISTA: GRAFO DE OBSIDIAN (vis.js)
+                 ═══════════════════════════════════════ -->
             <div id="view-graph" class="absolute inset-0 hidden p-5">
                 <div class="graph-frame w-full h-full flex flex-col">
-                    <div class="flex items-center gap-2 px-4 py-2.5 border-b" style="border-color:var(--brd);background:var(--bg-raised)">
-                        <i data-lucide="share-2" class="w-3.5 h-3.5" style="color:var(--acc-light)"></i>
-                        <span class="text-[11px] font-semibold" style="color:var(--text-3)">Knowledge Graph</span>
-                        <span class="ml-auto text-[9px] font-mono" style="color:var(--text-5)">graphify-out/graph.html</span>
+                    <div class="flex items-center gap-2 px-5 py-3 border-b" style="border-color:var(--brd);background:var(--bg-raised)">
+                        <i data-lucide="share-2" class="w-4 h-4" style="color:var(--acc-light)"></i>
+                        <span class="text-[12px] font-semibold" style="color:var(--text-3)">Obsidian Graph View</span>
+                        <span class="text-[10px] font-mono ml-2" style="color:var(--text-5)">vault/</span>
+                        <div class="ml-auto flex items-center gap-3">
+                            <span class="text-[10px] font-mono" style="color:var(--text-5)" id="graph-stats">— nodos · — edges</span>
+                            <button onclick="loadGraph()" class="text-[10px] px-3 py-1 rounded-md font-medium transition-colors hover:opacity-80" style="color:var(--acc-light);border:1px solid var(--brd)">
+                                <i data-lucide="refresh-cw" class="w-3 h-3 inline"></i> Recargar
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex-1 min-h-0">
-                        <iframe src="/graph-view" class="graph-iframe" id="graph-iframe" title="Knowledge Graph" loading="lazy"></iframe>
+                    <!-- Layout dividido: Grafo + Panel de Nota -->
+                    <div class="graph-layout flex-1 min-h-0">
+                        <!-- Área del canvas vis.js -->
+                        <div class="graph-canvas-area" id="graph-canvas-area">
+                            <div class="w-full h-full relative" id="graph-container"></div>
+                        </div>
+                        <!-- Panel lateral de detalle -->
+                        <div class="note-panel" id="note-panel">
+                            <div class="note-panel-header">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <i data-lucide="file-text" class="w-4 h-4 flex-shrink-0" style="color:var(--acc-light)"></i>
+                                    <span class="text-[11px] font-semibold truncate" style="color:var(--text-3)" id="note-panel-title">Nota</span>
+                                </div>
+                                <button class="note-panel-close" onclick="closeNotePanel()" title="Cerrar">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                            <div class="note-panel-body" id="note-panel-body">
+                                <div class="note-panel-loading" id="note-loading">
+                                    <span style="color:var(--text-5);font-size:13px">Selecciona una nota del grafo...</span>
+                                </div>
+                                <div id="note-detail" style="display:none">
+                                    <h2 class="note-title" id="note-detail-title"></h2>
+                                    <div class="flex items-center gap-2 mb-4">
+                                        <span class="note-badge" id="note-badge-connections"><i data-lucide="link" class="w-3 h-3"></i> <span id="note-conn-count">0</span> conexiones</span>
+                                    </div>
+                                    <div class="note-content" id="note-detail-content"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ═══════ VISTA: CHAT ═══════ -->
+            <!-- ═══════════════════════════════════════
+                 VISTA: CHAT IA
+                 ═══════════════════════════════════════ -->
             <div id="view-chat" class="absolute inset-0 hidden overflow-y-auto">
-                <div class="chat-container px-4 py-6">
+                <div class="chat-container px-5 py-6">
                     <!-- Header -->
                     <div class="flex items-center gap-3 pb-5 flex-shrink-0">
-                        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:rgba(99,102,241,0.10)">
-                            <i data-lucide="brain" class="w-5 h-5" style="color:var(--acc-light)"></i>
+                        <div class="w-11 h-11 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.12))">
+                            <i data-lucide="brain" class="w-[22px] h-[22px]" style="color:var(--acc-light)"></i>
                         </div>
                         <div>
-                            <h2 class="text-[15px] font-semibold tracking-[-0.02em]" style="color:var(--text-1)">Graphify AI Engine</h2>
-                            <p class="text-[11px]" style="color:var(--text-4)">Graph-RAG · Gemini 1.5 Flash</p>
+                            <h2 class="text-[16px] font-semibold tracking-[-0.02em]" style="color:var(--text-1)">Asistente IA</h2>
+                            <p class="text-[11px]" style="color:var(--text-4)">Obsidian Vault · Graph-RAG · Gemini 1.5 Flash</p>
                         </div>
                     </div>
 
                     <!-- Messages -->
-                    <div id="chat-messages" class="flex-1 space-y-4 pb-4">
+                    <div id="chat-messages" class="flex-1 space-y-5 pb-4">
                         <!-- AI Welcome -->
                         <div class="msg-enter flex gap-3 items-start">
-                            <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(99,102,241,0.10)">
-                                <i data-lucide="brain" class="w-4 h-4" style="color:var(--acc-light)"></i>
+                            <div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(99,102,241,0.10)">
+                                <i data-lucide="brain" class="w-[18px] h-[18px]" style="color:var(--acc-light)"></i>
                             </div>
                             <div>
                                 <div class="chat-bubble-ai">
-                                    <p class="text-[13px] leading-[1.65]" style="color:var(--text-2)">Hola, soy tu asistente de knowledge graph. Puedo buscar información en el grafo y responder preguntas sobre tus datos.</p>
+                                    <p class="text-[13px] leading-[1.7]" style="color:var(--text-2)">Hola, soy tu asistente del Obsidian & Git Intelligence Center. Puedo buscar notas del Vault, explicar conexiones del knowledge graph y responder preguntas sobre tu proyecto.</p>
                                 </div>
                                 <div class="flex flex-wrap gap-2 mt-3" id="suggestion-chips">
-                                    <button onclick="sendFromChip('press de banca')" class="chip"><i data-lucide="dumbbell" class="w-3 h-3"></i> press de banca</button>
-                                    <button onclick="sendFromChip('espalda')" class="chip"><i data-lucide="arrow-up-from-line" class="w-3 h-3"></i> espalda</button>
-                                    <button onclick="sendFromChip('hipertrofia')" class="chip"><i data-lucide="trending-up" class="w-3 h-3"></i> hipertrofia</button>
-                                    <button onclick="sendFromChip('rutina')" class="chip"><i data-lucide="list-checks" class="w-3 h-3"></i> rutina</button>
-                                    <button onclick="sendFromChip('recuperación')" class="chip"><i data-lucide="heart-pulse" class="w-3 h-3"></i> recuperación</button>
-                                    <button onclick="sendFromChip('sobrecarga')" class="chip"><i data-lucide="zap" class="w-3 h-3"></i> sobrecarga</button>
+                                    <button onclick="sendFromChip('press de banca')" class="chip"><i data-lucide="dumbbell" class="w-3 h-3"></i> Press de banca</button>
+                                    <button onclick="sendFromChip('hipertrofia')" class="chip"><i data-lucide="trending-up" class="w-3 h-3"></i> Hipertrofia</button>
+                                    <button onclick="sendFromChip('rutina PPL')" class="chip"><i data-lucide="list-checks" class="w-3 h-3"></i> Rutina PPL</button>
+                                    <button onclick="sendFromChip('sobrecarga progresiva')" class="chip"><i data-lucide="zap" class="w-3 h-3"></i> Sobrecarga</button>
+                                    <button onclick="sendFromChip('nutrición y macros')" class="chip"><i data-lucide="apple" class="w-3 h-3"></i> Nutrición</button>
+                                    <button onclick="sendFromChip('recuperación y sueño')" class="chip"><i data-lucide="heart-pulse" class="w-3 h-3"></i> Recuperación</button>
                                 </div>
                             </div>
                         </div>
@@ -369,15 +452,15 @@ Events:       Just the push event</code>
                     <div class="flex-shrink-0 pt-3">
                         <div class="chat-input-wrap">
                             <form id="chat-form" class="flex items-center gap-2 p-2">
-                                <input id="chat-input" type="text" placeholder="Pregunta algo al knowledge graph..."
-                                    class="flex-1 bg-transparent px-3 py-2.5 text-[13px] focus:outline-none" style="color:var(--text-1)"
+                                <input id="chat-input" type="text" placeholder="Pregunta algo sobre tu Vault..."
+                                    class="flex-1 bg-transparent px-4 py-3 text-[14px] focus:outline-none" style="color:var(--text-1)"
                                     autocomplete="off" />
-                                <button type="submit" class="w-9 h-9 rounded-xl flex items-center justify-center transition-colors flex-shrink-0" style="background:var(--acc);color:white">
-                                    <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                                <button type="submit" class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0" style="background:var(--acc);color:white">
+                                    <i data-lucide="arrow-up" class="w-[18px] h-[18px]"></i>
                                 </button>
                             </form>
                         </div>
-                        <p class="text-[10px] mt-2 text-center font-light" style="color:var(--text-5)">graph.json · Gemini 1.5 Flash</p>
+                        <p class="text-[10px] mt-2.5 text-center font-light" style="color:var(--text-5)">obsidian vault · graph-rag · gemini 1.5 flash</p>
                     </div>
                 </div>
             </div>
@@ -389,73 +472,87 @@ Events:       Just the push event</code>
     (() => {
         'use strict';
         const API = window.location.origin;
-        let sseSource = null, currentView = 'tabla', isDark = true, sidebarCollapsed = false;
-        const knownProjects = new Set(), knownDevelopers = new Set();
+        let sseSource = null, currentView = 'activity', isDark = true, sidebarCollapsed = false;
+        let visNetwork = null, visNodes = null, visEdges = null;
+        const knownRepos = new Set(), knownAuthors = new Set();
 
         const $=id=>document.getElementById(id);
-        const $body=$('activity-body'), $table=$('activity-table'), $empty=$('empty-state'), $count=$('activity-count');
+        const $body=$('commit-body'), $table=$('commit-table'), $empty=$('empty-state'), $count=$('commit-count');
         const $chatMsgs=$('chat-messages'), $chatForm=$('chat-form'), $chatInput=$('chat-input');
         const $clock=$('clock'), $sseDot=$('sse-dot'), $sseLabel=$('sse-label');
         const $pageTitle=$('page-title'), $liveBadge=$('live-badge'), $sidebar=$('sidebar');
-        const $filterProject=$('filter-project'), $filterDeveloper=$('filter-developer');
-        const $filterDateFrom=$('filter-date-from'), $filterDateTo=$('filter-date-to');
+        const $filterRepo=$('filter-repo'), $filterAuthor=$('filter-author'), $filterImpact=$('filter-impact');
+        const $graphStats=$('graph-stats'), $vaultStatus=$('vault-status');
 
         lucide.createIcons();
 
+        // ── Clock ──────────────────────────────────
         function tick(){ $clock.textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
         tick(); setInterval(tick,1000);
 
+        // ── Theme ──────────────────────────────────
         function applyTheme(){
             const r=document.documentElement, b=document.body;
             if(isDark){r.classList.add('dark');r.classList.remove('light');b.classList.remove('light')}
             else{r.classList.remove('dark');r.classList.add('light');b.classList.add('light')}
             $('theme-icon-sun').style.display=isDark?'none':'block';
             $('theme-icon-moon').style.display=isDark?'block':'none';
+            // Re-render graph if visible
+            if(currentView==='graph' && visNetwork) loadGraph();
         }
         window.toggleTheme=()=>{ isDark=!isDark; applyTheme(); };
         window.toggleSidebar=()=>{ sidebarCollapsed=!sidebarCollapsed; $sidebar.classList.toggle('collapsed',sidebarCollapsed); };
 
+        // ── SSE Status ─────────────────────────────
         function sseStatus(s){
             $sseDot.className='sse-dot';
             $sseDot.classList.add(s==='on'?'sse-on':s==='off'?'sse-off':'sse-wait');
-            $sseLabel.textContent=s==='on'?'SSE Conectado':s==='off'?'SSE Desconectado':'Conectando...';
+            $sseLabel.textContent=s==='on'?'SSE Conectado':s==='off'?'Desconectado':'Conectando...';
         }
 
-        const viewTitles={tabla:'Trazabilidad de Cambios',graph:'Knowledge Graph',chat:'Asistente IA'};
+        // ── Navigation ─────────────────────────────
+        const viewTitles={activity:'Actividad en Vivo',graph:'Grafo de Obsidian',chat:'Asistente IA'};
         window.navigate=function(v){
             currentView=v;
             document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
             const nb=$(`nav-${v}`); if(nb)nb.classList.add('active');
             $pageTitle.textContent=viewTitles[v]||'';
-            $liveBadge.style.display=v==='tabla'?'flex':'none';
-            ['tabla','graph','chat'].forEach(x=>{const el=$(`view-${x}`);if(el)el.classList.toggle('hidden',x!==v)});
-            if(v==='graph'){const f=$('graph-iframe');if(!f.src||!f.src.endsWith('/graph-view'))f.src='/graph-view'}
-            if(v==='chat')setTimeout(()=>$chatInput.focus(),100);
+            $liveBadge.style.display=v==='activity'?'flex':'none';
+            ['activity','graph','chat'].forEach(x=>{const el=$(`view-${x}`);if(el)el.classList.toggle('hidden',x!==v)});
+            // Esperar a que el navegador calcule el layout antes de dibujar el grafo
+            if(v==='graph') requestAnimationFrame(()=>setTimeout(loadGraph, 60));
+            if(v==='chat') setTimeout(()=>$chatInput.focus(),120);
         };
 
-        function addProjectOption(n){if(knownProjects.has(n))return;knownProjects.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;$filterProject.appendChild(o)}
-        function addDeveloperOption(n){if(knownDevelopers.has(n))return;knownDevelopers.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;$filterDeveloper.appendChild(o)}
+        // ── Filters ────────────────────────────────
+        function addRepoOption(n){if(knownRepos.has(n))return;knownRepos.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;$filterRepo.appendChild(o)}
+        function addAuthorOption(n){if(knownAuthors.has(n))return;knownAuthors.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;$filterAuthor.appendChild(o)}
 
         function applyFilters(){
-            const p=$filterProject.value,d=$filterDeveloper.value,df=$filterDateFrom.value,dt=$filterDateTo.value;
-            Array.from($body.children).forEach(r=>{
-                let s=true;
-                if(p&&r.dataset.project!==p)s=false;
-                if(d&&r.dataset.developer!==d)s=false;
-                if(df&&(r.dataset.timestamp||'').slice(0,10)<df)s=false;
-                if(dt&&(r.dataset.timestamp||'').slice(0,10)>dt)s=false;
-                r.style.display=s?'':'none';
+            const r=$filterRepo.value, a=$filterAuthor.value, imp=$filterImpact.value;
+            Array.from($body.children).forEach(row=>{
+                let show=true;
+                if(r && row.dataset.repo!==r) show=false;
+                if(a && row.dataset.author!==a) show=false;
+                if(imp && row.dataset.impact!==imp) show=false;
+                row.style.display=show?'':'none';
             });
         }
-        $filterProject.addEventListener('change',applyFilters);
-        $filterDeveloper.addEventListener('change',applyFilters);
-        $filterDateFrom.addEventListener('change',applyFilters);
-        $filterDateTo.addEventListener('change',applyFilters);
+        $filterRepo.addEventListener('change',applyFilters);
+        $filterAuthor.addEventListener('change',applyFilters);
+        $filterImpact.addEventListener('change',applyFilters);
 
+        // ── Utilities ──────────────────────────────
         function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML}
-        function fmtTime(iso){return new Date(iso).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}
+        function fmtTime(ts){
+            try{return new Date(ts).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}catch{return '—'}
+        }
+        function fmtDate(ts){
+            try{return new Date(ts).toLocaleDateString('es-CO',{day:'2-digit',month:'short'})}catch{return ''}
+        }
         function avatarGrad(n){let h=0;for(let i=0;i<n.length;i++)h=n.charCodeAt(i)+((h<<5)-h);return`avatar-grad-${Math.abs(h)%8}`}
 
+        // ── Commit Table ───────────────────────────
         function updateEmpty(){
             const has=$body.children.length>0;
             $empty.classList.toggle('hidden',has);
@@ -466,47 +563,299 @@ Events:       Just the push event</code>
         function createRow(item,animate){
             const tr=document.createElement('tr');
             tr.className=`table-row group ${animate?'row-enter':''}`;
-            tr.dataset.developer=item.developer; tr.dataset.project=item.project; tr.dataset.timestamp=item.timestamp;
-            const grad=avatarGrad(item.developer), imp=item.impact.toLowerCase();
-            const impColor=imp==='alto'?'#f87171':imp==='medio'?'#eab308':'#22c55e';
+            tr.dataset.author=item.author; tr.dataset.repo=item.repo; tr.dataset.impact=item.impact;
+            const grad=avatarGrad(item.author);
+            const imp=item.impact.toLowerCase();
+            const ledClass=imp==='alto'?'led-alto':imp==='medio'?'led-medio':'led-bajo';
+            const badgeClass=`badge-impact-${imp}`;
             tr.innerHTML=`
-                <td class="py-3 px-4 table-cell-border"><div class="flex items-center gap-2.5">
-                    <div class="w-7 h-7 rounded-full ${grad} flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">${esc(item.developer_avatar)}</div>
-                    <span class="text-[12px] font-semibold" style="color:var(--text-1)">${esc(item.developer)}</span>
+                <td class="py-3.5 px-5 table-cell-border"><div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full ${grad} flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">${esc(item.author_avatar)}</div>
+                    <span class="text-[12.5px] font-semibold" style="color:var(--text-1)">${esc(item.author)}</span>
                 </div></td>
-                <td class="py-3 px-3 table-cell-border"><span class="inline-flex px-2 py-[2px] rounded-md text-[10px] font-semibold badge-${item.project_color}">${esc(item.project)}</span></td>
-                <td class="py-3 px-3 table-cell-border"><span class="text-[12px]" style="color:var(--text-2)">${esc(item.activity)}</span></td>
-                <td class="py-3 px-3 table-cell-border"><span class="text-[10px] font-mono font-medium tabular-nums" style="color:var(--text-4)">${fmtTime(item.timestamp)}</span></td>
-                <td class="py-3 px-4"><div class="flex items-center gap-2">
-                    <span class="led led-${imp}"></span>
-                    <span class="text-[11px] font-semibold" style="color:${impColor}">${esc(item.impact)}</span>
+                <td class="py-3.5 px-4 table-cell-border">
+                    <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold" style="color:var(--acc-light)">
+                        <i data-lucide="git-branch" class="w-3 h-3"></i>${esc(item.repo)}
+                    </span>
+                </td>
+                <td class="py-3.5 px-4 table-cell-border"><span class="text-[12px] font-medium" style="color:var(--text-2)">${esc(item.message)}</span></td>
+                <td class="py-3.5 px-4 table-cell-border">
+                    <span class="text-[10px] font-mono font-medium tabular-nums" style="color:var(--text-4)">${fmtDate(item.timestamp)} ${fmtTime(item.timestamp)}</span>
+                </td>
+                <td class="py-3.5 px-5"><div class="flex items-center gap-2">
+                    <span class="led ${ledClass}"></span>
+                    <span class="inline-flex px-2 py-[3px] rounded-md text-[10px] font-semibold ${badgeClass}">${esc(item.impact)}</span>
                 </div></td>`;
-            addProjectOption(item.project); addDeveloperOption(item.developer);
+            addRepoOption(item.repo); addAuthorOption(item.author);
+            lucide.createIcons({nodes:[tr]});
             return tr;
         }
 
-        function prependActivity(item){
+        function prependCommit(item){
             const row=createRow(item,true);
             if($body.firstChild)$body.insertBefore(row,$body.firstChild);else $body.appendChild(row);
             updateEmpty(); applyFilters();
-            setTimeout(()=>row.classList.remove('row-enter'),2000);
+            setTimeout(()=>row.classList.remove('row-enter'),2500);
         }
-        window.clearActivity=()=>{$body.innerHTML='';updateEmpty()};
+        window.clearCommits=()=>{$body.innerHTML='';updateEmpty()};
 
         async function loadActivity(){
-            try{const r=await fetch(`${API}/api/activity`);if(!r.ok)return;const items=await r.json();
-            if(items.length){items.reverse().forEach(i=>$body.appendChild(createRow(i,false)));updateEmpty()}}catch{}
+            try{
+                const r=await fetch(`${API}/api/activity`);if(!r.ok)return;const items=await r.json();
+                if(items.length){items.reverse().forEach(i=>$body.appendChild(createRow(i,false)));updateEmpty()}
+            }catch{}
         }
 
+        // ── SSE ────────────────────────────────────
         function connectSSE(){
             sseStatus('wait'); sseSource=new EventSource(`${API}/api/stream`);
-            sseSource.addEventListener('activity',e=>{try{prependActivity(JSON.parse(e.data))}catch{}});
+            sseSource.addEventListener('activity',e=>{try{prependCommit(JSON.parse(e.data))}catch{}});
             sseSource.addEventListener('ping',()=>{});
             sseSource.onopen=()=>sseStatus('on');
             sseSource.onerror=()=>{sseStatus('off');sseSource.close();setTimeout(()=>{if(!sseSource||sseSource.readyState===EventSource.CLOSED)connectSSE()},5000)};
         }
 
-        // ── Chat ─────────────────────────────────
+        // ── Note Panel ────────────────────────────
+        const $notePanel=$('note-panel'), $notePanelTitle=$('note-panel-title'), $notePanelBody=$('note-panel-body');
+        const $noteDetail=$('note-detail'), $noteDetailTitle=$('note-detail-title'), $noteDetailContent=$('note-detail-content');
+        const $noteLoading=$('note-loading'), $noteConnCount=$('note-conn-count'), $noteBadgeConns=$('note-badge-connections');
+
+        window.closeNotePanel=function(){
+            $notePanel.classList.remove('open');
+            if(visNetwork) visNetwork.unselectAll();
+        };
+
+        function openNotePanel(nodeId){
+            $notePanel.classList.add('open');
+            $noteLoading.style.display='flex';
+            $noteDetail.style.display='none';
+
+            // Obtener label del nodo desde visNodes
+            let nodeLabel = nodeId;
+            try{ const n = visNodes.get(nodeId); if(n) nodeLabel = n.label; }catch{}
+            $notePanelTitle.textContent = nodeLabel;
+
+            // Contar conexiones
+            let connCount = 0;
+            try{
+                const edges = visEdges.get();
+                connCount = edges.filter(e => e.from === nodeId || e.to === nodeId).length;
+            }catch{}
+            $noteConnCount.textContent = connCount;
+
+            // Fetch contenido de la nota
+            fetch(`${API}/api/notes/${encodeURIComponent(nodeId)}`)
+                .then(r => {
+                    if(!r.ok) throw new Error('Nota no encontrada');
+                    return r.json();
+                })
+                .then(data => {
+                    $noteLoading.style.display='none';
+                    $noteDetail.style.display='block';
+                    $noteDetailTitle.textContent = data.title;
+                    $noteDetailContent.innerHTML = renderMd(data.content);
+                    lucide.createIcons({nodes:[$noteDetailContent, $noteBadgeConns]});
+                })
+                .catch(err => {
+                    $noteLoading.style.display='none';
+                    $noteDetail.style.display='block';
+                    $noteDetailTitle.textContent = nodeLabel;
+                    $noteDetailContent.innerHTML = `<p style="color:var(--text-4)">No se pudo cargar la nota.</p>`;
+                });
+        }
+
+        function renderMd(text){
+            // Markdown básico → HTML para notas del Vault
+            let html = esc(text);
+            // Headers
+            html = html.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Italic
+            html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // Unordered lists
+            html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            // Links [[Nota]]
+            html = html.replace(/\[\[([^\]]+)\]\]/g, '<span style="color:var(--acc-light);cursor:pointer;text-decoration:underline dotted">$1</span>');
+            // Paragraphs (doble newline)
+            html = html.replace(/\n\n/g, '</p><p>');
+            // Single newlines within paragraphs
+            html = html.replace(/\n/g, '<br>');
+            // Wrap
+            html = '<p>' + html + '</p>';
+            // Clean empty paragraphs
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[123]>)/g, '$1');
+            html = html.replace(/(<\/h[123]>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<ul>)/g, '$1');
+            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+            return html;
+        }
+
+        // ── Obsidian Graph (vis.js) ────────────────
+        window.loadGraph=async function(){
+            const container=$('graph-container');
+
+            // Verificar que el contenedor tenga dimensiones reales
+            const rect=container.getBoundingClientRect();
+            console.log('[Graph] Container dimensions:', Math.round(rect.width), 'x', Math.round(rect.height));
+
+            // Si el contenedor mide 0, forzar tamaño y reintentar
+            if(rect.width < 10 || rect.height < 10){
+                console.warn('[Graph] Container too small, forcing size and retrying...');
+                container.style.width='100%';
+                container.style.height='100%';
+                container.style.minHeight='400px';
+                // Reintentar después del reflow
+                requestAnimationFrame(()=>setTimeout(loadGraph, 100));
+                return;
+            }
+
+            try{
+                console.log('[Graph] Fetching /api/graph-data...');
+                const r=await fetch(`${API}/api/graph-data`);
+                if(!r.ok){
+                    console.error('[Graph] Fetch failed:', r.status, r.statusText);
+                    $graphStats.textContent='Error al cargar';
+                    return;
+                }
+                const data=await r.json();
+                console.log('[Graph] Data received:', data.nodes.length, 'nodes,', data.edges.length, 'edges');
+
+                // Actualizar contadores SIEMPRE
+                $graphStats.textContent=`${data.nodes.length} nodos · ${data.edges.length} edges`;
+                $vaultStatus.textContent=`Vault: ${data.nodes.length} notas · ${data.edges.length} links`;
+
+                // Si no hay datos, mostrar mensaje
+                if(!data.nodes.length){
+                    container.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-4);font-size:14px">No se encontraron notas .md en vault/</div>';
+                    return;
+                }
+
+                // Colores llamativos según tema — morado/neón en dark, azul profundo en light
+                const dark = document.documentElement.classList.contains('dark');
+
+                const nodeColor = dark ? {
+                    background: '#818cf8',
+                    border: '#a5b4fc',
+                    highlight: { background: '#c4b5fd', border: '#e0e7ff' },
+                    hover: { background: '#a78bfa', border: '#c4b5fd' }
+                } : {
+                    background: '#6366f1',
+                    border: '#818cf8',
+                    highlight: { background: '#4f46e5', border: '#6366f1' },
+                    hover: { background: '#4f46e5', border: '#818cf8' }
+                };
+
+                const edgeColor = dark ? {
+                    color: 'rgba(129,140,248,0.30)',
+                    highlight: 'rgba(167,139,250,0.6)',
+                    hover: 'rgba(167,139,250,0.5)'
+                } : {
+                    color: 'rgba(99,102,241,0.25)',
+                    highlight: 'rgba(79,70,229,0.5)',
+                    hover: 'rgba(79,70,229,0.4)'
+                };
+
+                // Mapear nodos con colores y estilo Obsidian Graph View
+                visNodes = new vis.DataSet(data.nodes.map(n => ({
+                    id: n.id,
+                    label: n.label,
+                    color: nodeColor,
+                    font: {
+                        color: dark ? '#e4e4e7' : '#18181b',
+                        size: 12,
+                        face: 'Inter, system-ui, sans-serif',
+                        strokeWidth: dark ? 3 : 2,
+                        strokeColor: dark ? '#09090b' : '#ffffff'
+                    },
+                    shape: 'dot',
+                    size: 16,
+                    borderWidth: 2,
+                    shadow: { enabled: true, color: dark ? 'rgba(129,140,248,0.35)' : 'rgba(99,102,241,0.18)', size: 10 }
+                })));
+
+                // Mapear edges con líneas finas tipo Obsidian
+                visEdges = new vis.DataSet(data.edges.map(e => ({
+                    from: e.from,
+                    to: e.to,
+                    color: edgeColor,
+                    width: 1,
+                    smooth: { type: 'continuous', roundness: 0.2 },
+                    arrows: { to: { enabled: false } }
+                })));
+
+                const graphData = { nodes: visNodes, edges: visEdges };
+
+                const options = {
+                    physics: {
+                        enabled: true,
+                        solver: 'forceAtlas2Based',
+                        forceAtlas2Based: {
+                            gravitationalConstant: -50,
+                            centralGravity: 0.01,
+                            springLength: 120,
+                            springConstant: 0.04,
+                            damping: 0.4
+                        },
+                        stabilization: {
+                            enabled: true,
+                            iterations: 200,
+                            updateInterval: 20
+                        },
+                        maxVelocity: 50,
+                        minVelocity: 0.3
+                    },
+                    interaction: {
+                        hover: true,
+                        tooltipDelay: 150,
+                        zoomView: true,
+                        dragView: true,
+                        navigationButtons: false,
+                        keyboard: { enabled: true }
+                    },
+                    nodes: {
+                        scaling: { min: 10, max: 30 }
+                    },
+                    edges: {
+                        scaling: { min: 0.5, max: 2 }
+                    }
+                };
+
+                // Destruir instancia anterior si existe
+                if(visNetwork){
+                    visNetwork.destroy();
+                    visNetwork = null;
+                }
+
+                console.log('[Graph] Creating vis.Network with container:', container.id, container.offsetWidth, 'x', container.offsetHeight);
+                visNetwork = new vis.Network(container, graphData, options);
+                console.log('[Graph] Network created successfully');
+
+                // ── Eventos de interacción con nodos ──
+                visNetwork.on('selectNode', function(params) {
+                    const selectedId = params.nodes[0];
+                    console.log('[Graph] Node selected:', selectedId);
+                    openNotePanel(selectedId);
+                });
+
+                visNetwork.on('deselectNode', function() {
+                    console.log('[Graph] Node deselected');
+                    closeNotePanel();
+                });
+
+            }catch(err){
+                console.error('[Graph] Error:', err);
+                $graphStats.textContent='Error: ' + err.message;
+            }
+        };
+
+        // ── Chat ───────────────────────────────────
         function addMsg(content,isUser){
             const w=document.createElement('div');
             w.className='msg-enter flex gap-3 items-start'+(isUser?' justify-end':'');
@@ -514,39 +863,49 @@ Events:       Just the push event</code>
                 w.innerHTML=`<div class="chat-bubble-user"><p class="text-[13px] leading-relaxed">${esc(content)}</p></div>`;
             } else {
                 w.innerHTML=`
-                    <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(99,102,241,0.10)">
-                        <i data-lucide="brain" class="w-4 h-4" style="color:var(--acc-light)"></i>
+                    <div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(99,102,241,0.10)">
+                        <i data-lucide="brain" class="w-[18px] h-[18px]" style="color:var(--acc-light)"></i>
                     </div>
-                    <div class="chat-bubble-ai"><div class="text-[13px] leading-[1.65]" style="color:var(--text-2)">${content}</div></div>`;
+                    <div class="chat-bubble-ai"><div class="text-[13px] leading-[1.7]" style="color:var(--text-2)">${content}</div></div>`;
             }
             $chatMsgs.appendChild(w); lucide.createIcons({nodes:[w]}); $chatMsgs.scrollTop=$chatMsgs.scrollHeight;
         }
         function addTyping(){
             const w=document.createElement('div');w.className='msg-enter flex gap-3 items-start';w.id='typing';
-            w.innerHTML=`<div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(99,102,241,0.10)"><i data-lucide="brain" class="w-4 h-4" style="color:var(--acc-light)"></i></div>
-                <div class="chat-bubble-ai flex items-center gap-1.5 py-3"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+            w.innerHTML=`<div class="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style="background:rgba(99,102,241,0.10)"><i data-lucide="brain" class="w-[18px] h-[18px]" style="color:var(--acc-light)"></i></div>
+                <div class="chat-bubble-ai flex items-center gap-2 py-4 px-5"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
             $chatMsgs.appendChild(w);lucide.createIcons({nodes:[w]});$chatMsgs.scrollTop=$chatMsgs.scrollHeight;
         }
         function removeTyping(){const e=$('typing');if(e)e.remove()}
 
         function mdLite(t){
             return t.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--text-1);font-weight:600">$1</strong>')
-                .replace(/`(.*?)`/g,'<code style="font-family:JetBrains Mono,monospace;font-size:11px;background:rgba(99,102,241,0.08);color:var(--acc-light);padding:1px 5px;border-radius:4px">$1</code>')
+                .replace(/`(.*?)`/g,'<code style="font-family:JetBrains Mono,monospace;font-size:11px;background:rgba(99,102,241,0.08);color:var(--acc-light);padding:1px 6px;border-radius:4px">$1</code>')
+                .replace(/^### (.*)$/gm,'<div style="font-weight:600;font-size:13px;margin-top:8px;color:var(--text-1)">$1</div>')
                 .replace(/\n- /g,'<br>• ').replace(/\n\n/g,'<br><br>').replace(/_(.*?)_/g,'<em style="color:var(--text-4)">$1</em>');
         }
 
         async function sendChat(msg){
             addMsg(msg,true);$chatInput.value='';addTyping();
-            try{const r=await fetch(`${API}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
-            if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();removeTyping();addMsg(mdLite(d.response),false)}
-            catch(err){removeTyping();addMsg(`<span style="color:#f87171;font-weight:500">Error:</span> ${esc(err.message)}`,false)}
+            try{
+                const r=await fetch(`${API}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+                if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();removeTyping();addMsg(mdLite(d.response),false)
+            }catch(err){removeTyping();addMsg(`<span style="color:#f87171;font-weight:500">Error:</span> ${esc(err.message)}`,false)}
         }
 
         $chatForm.addEventListener('submit',e=>{e.preventDefault();const m=$chatInput.value.trim();if(m)sendChat(m)});
         window.sendFromChip=function(t){$chatInput.value=t;sendChat(t)};
 
-        // ── Init ────────────────────────────────
-        applyTheme(); updateEmpty(); loadActivity().then(connectSSE);
+        // ── Vault Status ───────────────────────────
+        async function updateVaultStatus(){
+            try{
+                const r=await fetch(`${API}/api/health`);if(!r.ok)return;const d=await r.json();
+                $vaultStatus.textContent=`Vault: ${d.graph_nodes} notas · ${d.graph_edges} links`;
+            }catch{}
+        }
+
+        // ── Init ───────────────────────────────────
+        applyTheme(); updateEmpty(); loadActivity().then(()=>{ connectSSE(); updateVaultStatus(); });
     })();
     </script>
 </body>

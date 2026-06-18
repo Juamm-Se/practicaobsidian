@@ -1,16 +1,15 @@
 """
-Graphify Core — Backend FastAPI v3.0
-=====================================
-Plataforma unificada: GitHub Webhook + Grafo interactivo + Chatbot Gemini Graph-RAG.
+Obsidian & Git Intelligence Center v5.0
+========================================
+Plataforma: Obsidian Vault Grafo + GitHub Webhook Real + Gemini Graph-RAG
 
 Endpoints:
-  GET  /                     → Sirve index.html (frontend)
-  GET  /graph-view           → Sirve graphify-out/graph.html (grafo real interactivo)
-  GET  /api/activity         → Historial de actividades reales
+  GET  /                     → Sirve index.html (frontend premium)
+  GET  /api/graph-data       → Nodos y conexiones del Vault Obsidian (vis.js)
+  GET  /api/activity         → Historial de commits
   GET  /api/stream           → SSE: broadcast en tiempo real desde webhook
-  POST /api/webhook/github   → Webhook oficial de GitHub (push events)
-  POST /api/webhook/git      → Webhook genérico (compatibilidad)
-  POST /api/chat             → Chatbot Graph-RAG con Gemini API + graph.json
+  POST /api/webhook/github   → Webhook GitHub: commits reales de git push
+  POST /api/chat             → Chatbot Graph-RAG con Gemini 1.5 Flash
   GET  /api/health           → Health check
 """
 
@@ -33,19 +32,15 @@ from pydantic import BaseModel, Field
 # ═══════════════════════════════════════════════════
 #  CONFIGURACIÓN — API KEY DE GEMINI
 # ═══════════════════════════════════════════════════
-#  INYECTA TU API KEY AQUÍ o configúrala como variable
-#  de entorno:  set GEMINI_API_KEY=tu_clave_aqui
-#
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")   # ← API KEY AQUÍ
 GEMINI_MODEL   = "gemini-1.5-flash"
 # ═══════════════════════════════════════════════════
 
-BASE_DIR        = Path(__file__).resolve().parent
-GRAPH_JSON_PATH = BASE_DIR / "graphify-out" / "graph.json"
-GRAPH_HTML_PATH = BASE_DIR / "graphify-out" / "graph.html"
-FRONTEND_PATH   = BASE_DIR / "index.html"
+BASE_DIR      = Path(__file__).resolve().parent
+VAULT_DIR     = BASE_DIR / "vault"
+FRONTEND_PATH = BASE_DIR / "index.html"
 
-app = FastAPI(title="Graphify Core", version="3.0.0")
+app = FastAPI(title="Obsidian & Git Intelligence Center", version="5.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,42 +56,30 @@ app.add_middleware(
 # ──────────────────────────────────────────────
 
 
-class WebhookPayload(BaseModel):
-    """Webhook genérico (compatibilidad con el endpoint anterior)."""
-    developer: str    = Field(..., min_length=1)
-    project: str      = Field(..., min_length=1)
-    activity: str     = Field(..., min_length=1)
-    impact: str       = Field(..., pattern=r"^(Bajo|Medio|Alto)$")
-    project_color: str | None = None
-
-
 class ChatMessage(BaseModel):
     message: str = Field(..., min_length=1)
 
 
-class ActivityItem(BaseModel):
+class CommitItem(BaseModel):
     id: str
-    developer: str
-    developer_avatar: str
-    project: str
-    project_color: str
-    activity: str
+    author: str
+    author_avatar: str
+    repo: str
+    message: str
     timestamp: str
-    impact: str
+    impact: str            # Bajo / Medio / Alto
 
 
 # ──────────────────────────────────────────────
 # Almacén en memoria + Broadcast SSE
 # ──────────────────────────────────────────────
 
-activity_log: list[ActivityItem] = []
+commit_log: list[CommitItem] = []
 MAX_LOG = 200
-
 sse_clients: list[asyncio.Queue] = []
 
 
 def _broadcast(event_dict: dict) -> None:
-    """Envía un evento a todos los clientes SSE conectados."""
     data = json.dumps(event_dict)
     dead: list[asyncio.Queue] = []
     for q in sse_clients:
@@ -113,231 +96,205 @@ def _broadcast(event_dict: dict) -> None:
 # Utilidades
 # ──────────────────────────────────────────────
 
-_COLOR_MAP = {
-    "graphify": "blue", "api": "blue", "backend": "blue",
-    "frontend": "violet", "dashboard": "violet", "ui": "violet",
-    "pipeline": "green", "data": "green", "etl": "green",
-    "auth": "amber", "security": "amber", "login": "amber",
-    "infra": "rose", "cloud": "rose", "devops": "rose", "deploy": "rose",
-}
-_FALLBACK = ["blue", "violet", "green", "amber", "rose"]
-
-
-def _infer_color(name: str) -> str:
-    low = name.lower()
-    for kw, c in _COLOR_MAP.items():
-        if kw in low:
-            return c
-    return _FALLBACK[sum(ord(c) for c in low) % len(_FALLBACK)]
-
 
 def _avatar(name: str) -> str:
     parts = name.strip().split()
     return (parts[0][0] + parts[-1][0]).upper() if len(parts) >= 2 else name[:2].upper()
 
 
-def _make_item(developer: str, project: str, activity: str, impact: str, project_color: str | None = None) -> ActivityItem:
-    """Crea un ActivityItem y lo registra en el log + broadcast SSE."""
-    item = ActivityItem(
-        id=str(uuid.uuid4())[:8],
-        developer=developer,
-        developer_avatar=_avatar(developer),
-        project=project,
-        project_color=project_color or _infer_color(project),
-        activity=activity,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        impact=impact,
-    )
-    activity_log.append(item)
-    if len(activity_log) > MAX_LOG:
-        activity_log.pop(0)
-    _broadcast(item.model_dump())
-    return item
-
-
-def _compute_impact(payload: dict) -> str:
-    """
-    Calcula el impacto dinámicamente desde un payload de GitHub.
-    - Alto: >3 archivos modificados, o keywords críticos en el mensaje.
-    - Medio: 2-3 archivos o mensajes relevantes.
-    - Bajo: 1 archivo, cambios menores.
-    """
-    critical_keywords = ["breaking", "migration", "refactor", "security", "hotfix", "urgent", "critical"]
-    commits = payload.get("commits", [])
-
-    total_added    = 0
-    total_removed  = 0
-    total_files    = 0
-
-    for commit in commits:
-        added   = commit.get("added", [])
-        removed = commit.get("removed", [])
-        modified = commit.get("modified", [])
-        total_files += len(added) + len(removed) + len(modified)
-
-    # Check commit messages for critical keywords
-    all_messages = " ".join(c.get("message", "").lower() for c in commits)
-    has_critical = any(kw in all_messages for kw in critical_keywords)
-
-    if has_critical or total_files > 3:
-        return "Alto"
-    elif total_files >= 2:
-        return "Medio"
-    else:
-        return "Bajo"
+def _infer_impact(message: str) -> str:
+    """Infiera el impacto del commit basado en el mensaje."""
+    msg = message.lower()
+    high_kw = ["breaking", "major", "release", "deploy", "hotfix", "urgent",
+               "remove", "delete", "migrate", "refactor", "rewrite", "feat"]
+    mid_kw  = ["fix", "update", "change", "add", "improve", "modify", "enhance",
+               "merge", "config", "style", "docs"]
+    for kw in high_kw:
+        if kw in msg:
+            return "Alto"
+    for kw in mid_kw:
+        if kw in msg:
+            return "Medio"
+    return "Bajo"
 
 
 # ──────────────────────────────────────────────
-# Graph JSON — Carga y búsqueda
+# Obsidian Vault — Parseo nativo de [[Enlaces]]
 # ──────────────────────────────────────────────
 
 
-def load_graph() -> dict:
-    if not GRAPH_JSON_PATH.exists():
-        return {"nodes": [], "hyperedges": [], "links": []}
-    try:
-        with open(GRAPH_JSON_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {"nodes": [], "hyperedges": [], "links": []}
-
-
-def search_graph_context(query: str, graph: dict, top_k: int = 8) -> list[dict]:
+def parse_vault() -> dict:
     """
-    Búsqueda por palabras clave en IDs, labels y source_files
-    de nodos e hiper-aristas del grafo.
+    Escanea la carpeta 'vault/' buscando archivos .md.
+    Extrae los enlaces internos tipo [[Nota]] y construye
+    nodos y conexiones para renderizar el grafo con vis.js.
+
+    Formato de salida (compatible con vis.js):
+      nodes: [{"id": <string>, "label": <string>}]
+      edges: [{"from": <string>, "to": <string>}]
     """
-    tokens = re.findall(r"\w+", query.lower())
-    words = set(tokens)
-    for i in range(len(tokens) - 1):
-        words.add(f"{tokens[i]} {tokens[i+1]}")
+    nodes: list[dict] = []
+    edges: list[dict] = []
+    seen_edges: set[tuple[str, str]] = set()  # deduplicación real
+    node_map: dict[str, str] = {}  # nombre limpio lower → id
+    node_id_counter = 0
 
-    results: list[dict] = []
+    if not VAULT_DIR.exists():
+        return {"nodes": nodes, "edges": edges}
 
-    for edge in graph.get("hyperedges", []):
-        text = " ".join([
-            (edge.get("label") or ""),
-            (edge.get("id") or ""),
-            (edge.get("source_file") or ""),
-            (edge.get("relation") or ""),
-        ]).lower()
-        score = sum(1 for w in words if w in text)
-        if score > 0:
-            results.append({
-                "type": "hyperedge",
-                "id": edge.get("id"),
-                "label": edge.get("label"),
-                "nodes": edge.get("nodes", []),
-                "relation": edge.get("relation"),
-                "confidence": edge.get("confidence"),
-                "source_file": edge.get("source_file"),
-                "score": score,
+    def _clean_name(filename: str) -> str:
+        name = filename
+        if name.lower().endswith(".md"):
+            name = name[:-3]
+        name = name.replace("_", " ").replace("-", " ")
+        name = re.sub(r"\s+", " ", name).strip()
+        return name
+
+    def _get_or_create_node(label: str) -> str:
+        nonlocal node_id_counter
+        key = label.lower()
+        if key in node_map:
+            return node_map[key]
+        node_id = str(node_id_counter)
+        node_id_counter += 1
+        node_map[key] = node_id
+        # Formato exacto que exige vis.js: id + label
+        nodes.append({
+            "id": node_id,
+            "label": label,
+        })
+        return node_id
+
+    # Primera pasada: crear nodos por cada archivo .md
+    md_files = sorted(VAULT_DIR.rglob("*.md"))
+    for filepath in md_files:
+        clean = _clean_name(filepath.name)
+        _get_or_create_node(clean)
+
+    # Segunda pasada: extraer [[enlaces]] y crear edges
+    for filepath in md_files:
+        source_clean = _clean_name(filepath.name)
+        source_id = node_map.get(source_clean.lower())
+        if source_id is None:
+            continue
+
+        try:
+            content = filepath.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        # Buscar enlaces tipo [[Nota]] y [[Nota|Alias]]
+        wikilinks = re.findall(r'\[\[([^\]#|]+)(?:[|#][^\]]*)?\]\]', content)
+        for link in wikilinks:
+            link_clean = link.strip()
+            if not link_clean:
+                continue
+            target_id = _get_or_create_node(link_clean)
+
+            # Solo crear edge si: no es self-loop Y no es duplicado
+            if source_id == target_id:
+                continue
+            edge_key = (source_id, target_id)
+            if edge_key in seen_edges:
+                continue
+            seen_edges.add(edge_key)
+
+            # Formato exacto que exige vis.js: from + to
+            edges.append({
+                "from": source_id,
+                "to": target_id,
             })
 
-    for node in graph.get("nodes", []):
-        text = " ".join([
-            (node.get("label") or ""),
-            (node.get("id") or ""),
-            (node.get("category") or ""),
-        ]).lower()
-        score = sum(1 for w in words if w in text)
+    return {"nodes": nodes, "edges": edges}
+
+
+def _get_vault_text_context(query: str, top_k: int = 5) -> str:
+    """
+    Busca notas relevantes del Vault para usar como contexto
+    en el chat de Gemini (Graph-RAG).
+    """
+    if not VAULT_DIR.exists():
+        return "No se encontró la carpeta 'vault/'."
+
+    tokens = set(re.findall(r"\w+", query.lower()))
+    scored_notes: list[tuple[int, str, str]] = []  # (score, title, excerpt)
+
+    for filepath in VAULT_DIR.rglob("*.md"):
+        try:
+            content = filepath.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        title = filepath.stem.replace("_", " ").replace("-", " ").strip()
+        text_lower = (title + " " + content).lower()
+        score = sum(1 for t in tokens if t in text_lower)
+
         if score > 0:
-            results.append({
-                "type": "node",
-                "id": node.get("id"),
-                "label": node.get("label"),
-                "category": node.get("category"),
-                "score": score,
-            })
+            # Extracto: primeras 300 chars relevantes
+            excerpt = content[:500].strip()
+            scored_notes.append((score, title, excerpt))
 
-    results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:top_k]
+    scored_notes.sort(key=lambda x: x[0], reverse=True)
+    top_notes = scored_notes[:top_k]
 
+    if not top_notes:
+        # Si no hay coincidencias, devolver un resumen general
+        all_titles = []
+        for filepath in VAULT_DIR.rglob("*.md"):
+            title = filepath.stem.replace("_", " ").replace("-", " ").strip()
+            all_titles.append(f"- {title}")
+        return (
+            "No se encontraron notas directamente relevantes.\n"
+            "Notas disponibles en el Vault:\n" + "\n".join(all_titles)
+        )
 
-def _format_context(context: list[dict]) -> str:
-    """Formatea el contexto para inyectarlo en el prompt de Gemini."""
-    if not context:
-        return "Sin contexto relevante encontrado en el knowledge graph."
     lines = []
-    for c in context:
-        if c["type"] == "hyperedge":
-            lines.append(
-                f"- Hiper-arista: \"{c['label']}\" | Relación: {c.get('relation')} | "
-                f"Confianza: {c.get('confidence')} | Nodos: {c.get('nodes')} | "
-                f"Fuente: {c.get('source_file')}"
-            )
-        else:
-            lines.append(f"- Nodo: \"{c['label']}\" | ID: {c['id']} | Categoría: {c.get('category')}")
+    for score, title, excerpt in top_notes:
+        lines.append(f"### {title}\n{excerpt}\n")
     return "\n".join(lines)
 
 
 # ──────────────────────────────────────────────
-# Gemini API — Integración Real
+# Gemini API — Graph-RAG
 # ──────────────────────────────────────────────
 
 
-async def _call_gemini(prompt: str, context: list[dict]) -> tuple[str, str]:
-    """
-    Llama a la API de Gemini con contexto del knowledge graph.
-    """
-    context_text = _format_context(context)
-
+async def _call_gemini(prompt: str, context: str) -> tuple[str, str]:
     if not GEMINI_API_KEY:
         return _local_response(prompt, context), "graph-local"
-
     try:
         import google.generativeai as genai
-
         genai.configure(api_key=GEMINI_API_KEY)
         model = genai.GenerativeModel(GEMINI_MODEL)
-
         system_prompt = (
-            "Eres el asistente experto de Graphify Core, una plataforma de knowledge graph. "
+            "Eres el asistente experto del Obsidian & Git Intelligence Center, "
+            "un sistema de gestión de conocimiento basado en Obsidian Vault. "
+            "Las notas del Vault están conectadas como un knowledge graph. "
             "Respondes en español de forma clara, precisa y bien estructurada. "
-            "Usas el contexto del grafo proporcionado para fundamentar tus respuestas. "
-            "Si el contexto no es suficiente para responder, lo indicas claramente y sugieres "
-            "términos de búsqueda alternativos basados en lo que sí conoces del grafo.\n\n"
-            f"Contexto del knowledge graph:\n{context_text}"
+            "Usas el contexto de las notas para fundamentar tus respuestas. "
+            "Si el contexto no es suficiente, sugieres términos alternativos basados en las notas del Vault.\n\n"
+            f"Contexto de las notas del Vault:\n{context}"
         )
-
         response = await model.generate_content_async(
             f"{system_prompt}\n\nPregunta del usuario: {prompt}"
         )
-
         return response.text, "gemini-api"
-
     except Exception as e:
         local = _local_response(prompt, context)
-        fallback = (
-            f"{local}\n\n"
-            f"⚠️ _Gemini no disponible ({type(e).__name__}). "
-            f"Mostrando resultado local._"
-        )
-        return fallback, "gemini-fallback"
+        return f"{local}\n\n⚠️ _Gemini no disponible ({type(e).__name__}). Mostrando resultado local._", "gemini-fallback"
 
 
-def _local_response(prompt: str, context: list[dict]) -> str:
-    """Respuesta de respaldo basada solo en el contexto del grafo local."""
-    if not context:
+def _local_response(prompt: str, context: str) -> str:
+    if "No se encontraron notas" in context:
         return (
-            f'No encontré información relevante para: **"{prompt}"**.\n\n'
-            f'Prueba con: *press, espalda, hipertrofia, recuperación, rutina, '
-            f'sobrecarga, pierna, hombro*.\n\n'
+            f'No encontré notas relevantes para: **"{prompt}"**.\n\n'
             f'_Configura GEMINI_API_KEY para respuestas generativas._'
         )
-
-    lines = [f"Encontré **{len(context)}** coincidencia(s) en el knowledge graph:\n"]
-    for c in context:
-        if c["type"] == "hyperedge":
-            lines.append(
-                f"- 🔗 **{c['label']}** ({c.get('relation', 'N/A')}) "
-                f"— Confianza: {c.get('confidence', 'N/A')} "
-                f"| Fuente: `{c.get('source_file', 'N/A')}`"
-            )
-        else:
-            lines.append(f"- 📌 **{c['label']}** — Categoría: {c.get('category', 'N/A')}")
-    lines.append("\n_Contexto de graph.json. Con Gemini activo la respuesta será generativa._")
-    return "\n".join(lines)
+    return (
+        f"Encontré contexto en el Vault para: **{prompt}**\n\n"
+        f"{context}\n\n"
+        f"_Contexto del Vault local. Con Gemini activo la respuesta será generativa._"
+    )
 
 
 # ──────────────────────────────────────────────
@@ -352,38 +309,92 @@ async def serve_frontend():
     return JSONResponse({"error": "index.html no encontrado"}, status_code=404)
 
 
-@app.get("/graph-view")
-async def serve_graph():
-    if GRAPH_HTML_PATH.exists():
-        return FileResponse(GRAPH_HTML_PATH, media_type="text/html")
-    return JSONResponse(
-        {"error": "graphify-out/graph.html no encontrado. Ejecuta /graphify primero."},
-        status_code=404,
-    )
+@app.get("/api/health")
+async def health_check():
+    graph = parse_vault()
+    return {
+        "status": "ok",
+        "version": "5.0.0",
+        "mode": "obsidian-git-center",
+        "vault_dir": str(VAULT_DIR),
+        "vault_exists": VAULT_DIR.exists(),
+        "graph_nodes": len(graph.get("nodes", [])),
+        "graph_edges": len(graph.get("edges", [])),
+        "commit_log_size": len(commit_log),
+        "sse_clients_connected": len(sse_clients),
+        "gemini_configured": bool(GEMINI_API_KEY),
+    }
+
+
+@app.get("/api/graph-data")
+async def get_graph_data():
+    """
+    Devuelve nodos y conexiones del Vault Obsidian
+    para renderizar con vis.js en el frontend.
+    """
+    return parse_vault()
+
+
+@app.get("/api/notes/{note_id}")
+async def get_note(note_id: str):
+    """
+    Devuelve el contenido de una nota del Vault.
+    Busca el archivo .md correspondiente usando el ID del nodo
+    (que coincide con el label limpio del archivo).
+    """
+    if not VAULT_DIR.exists():
+        return JSONResponse({"error": "Vault no encontrado"}, status_code=404)
+
+    # Buscar el nodo en parse_vault para obtener el label real
+    graph = parse_vault()
+    label = None
+    for node in graph.get("nodes", []):
+        if str(node["id"]) == str(note_id):
+            label = node["label"]
+            break
+
+    if label is None:
+        return JSONResponse({"error": f"Nota con ID '{note_id}' no encontrada"}, status_code=404)
+
+    # Reconstruir el nombre de archivo a partir del label
+    # Label "01 Ejercicios Pecho" → buscar archivo que matchee
+    label_lower = label.lower()
+
+    for filepath in VAULT_DIR.rglob("*.md"):
+        # Reconstruir cómo parse_vault limpia el nombre
+        clean = filepath.name
+        if clean.lower().endswith(".md"):
+            clean = clean[:-3]
+        clean = clean.replace("_", " ").replace("-", " ")
+        clean = re.sub(r"\s+", " ", clean).strip()
+
+        if clean.lower() == label_lower:
+            try:
+                content = filepath.read_text(encoding="utf-8")
+                return {"title": label, "content": content}
+            except (OSError, UnicodeDecodeError):
+                return JSONResponse({"error": "Error leyendo la nota"}, status_code=500)
+
+    return JSONResponse({"error": f"Archivo para '{label}' no encontrado en vault/"}, status_code=404)
 
 
 @app.get("/api/activity")
 async def get_activity():
-    return [item.model_dump() for item in reversed(activity_log)]
+    return [item.model_dump() for item in reversed(commit_log)]
 
 
-# ── Webhook oficial de GitHub ──────────────────
+# ── Webhook de GitHub — Commits reales ─────────
 
 @app.post("/api/webhook/github")
 async def webhook_github(request: Request):
     """
-    Receptor oficial de GitHub Webhooks para eventos 'push'.
-
-    Configura en tu repo de GitHub:
-      Payload URL: http://tu-servidor:8000/api/webhook/github
-      Content type: application/json
-      Events: Just the push event
-
-    Extrae dinámicamente:
-      - proyecto:   payload["repository"]["name"]
-      - desarrollador: payload["pusher"]["name"] o commits[0]["author"]["name"]
-      - actividad:  payload["commits"][0]["message"]
-      - impacto:    calculado (>3 archivos = Alto, 2-3 = Medio, 1 = Bajo)
+    Receptor REAL de GitHub Webhooks.
+    Recibe el payload cuando haces 'git push' y extrae:
+      - Repositorio
+      - Autor del commit
+      - Mensaje del commit
+      - Hora
+    Envía inmediatamente al frontend vía SSE.
     """
     try:
         payload = await request.json()
@@ -391,81 +402,53 @@ async def webhook_github(request: Request):
         return JSONResponse({"error": "Payload JSON inválido"}, status_code=400)
 
     event = request.headers.get("x-github-event", "push")
-
-    # Solo procesamos push events
     if event != "push":
-        return {"status": "skipped", "reason": f"Evento '{event}' no soportado. Solo 'push'."}
+        return {"status": "skipped", "reason": f"Evento '{event}' ignorado. Solo 'push'."}
 
-    # Extraer datos del payload estándar de GitHub
-    repo_name = payload.get("repository", {}).get("name", "unknown")
-    commits   = payload.get("commits", [])
-
+    commits = payload.get("commits", [])
     if not commits:
         return {"status": "skipped", "reason": "Push sin commits."}
 
-    # Desarrollador: pusher > primer commit author
-    developer = (
-        payload.get("pusher", {}).get("name")
-        or commits[0].get("author", {}).get("name")
-        or "unknown"
-    )
+    repo_name = payload.get("repository", {}).get("name", "unknown")
+    items_created = []
 
-    # Actividad: mensaje del primer commit (truncado a 120 chars)
-    activity = commits[0].get("message", "Sin mensaje")[:120]
+    for commit in commits:
+        # Extraer datos reales del commit
+        author = (
+            commit.get("author", {}).get("name")
+            or payload.get("pusher", {}).get("name")
+            or "unknown"
+        )
+        message = commit.get("message", "Sin mensaje")[:120]
+        timestamp = commit.get("timestamp", datetime.now(timezone.utc).isoformat())
+        impact = _infer_impact(message)
 
-    # Si hay múltiples commits, indicar cuántos
-    if len(commits) > 1:
-        activity = f"{activity} (+{len(commits)-1} más)"
-
-    # Impacto dinámico basado en archivos modificados
-    impact = _compute_impact(payload)
-
-    item = _make_item(
-        developer=developer,
-        project=repo_name,
-        activity=activity,
-        impact=impact,
-    )
+        item = CommitItem(
+            id=str(uuid.uuid4())[:8],
+            author=author,
+            author_avatar=_avatar(author),
+            repo=repo_name,
+            message=message,
+            timestamp=timestamp,
+            impact=impact,
+        )
+        commit_log.append(item)
+        if len(commit_log) > MAX_LOG:
+            commit_log.pop(0)
+        _broadcast(item.model_dump())
+        items_created.append(item.model_dump())
 
     return {
         "status": "ok",
-        "id": item.id,
-        "developer": developer,
-        "project": repo_name,
-        "impact": impact,
-        "commits_processed": len(commits),
-        "sse_clients": len(sse_clients),
-    }
-
-
-# ── Webhook genérico (compatibilidad) ─────────
-
-@app.post("/api/webhook/git")
-async def webhook_git(payload: WebhookPayload):
-    """
-    Webhook genérico para inyectar actividad manualmente.
-
-    curl -X POST http://localhost:8000/api/webhook/git \
-      -H "Content-Type: application/json" \
-      -d '{"developer":"Juan Mora","project":"Graphify API","activity":"Deploy exitoso","impact":"Alto"}'
-    """
-    item = _make_item(
-        developer=payload.developer,
-        project=payload.project,
-        activity=payload.activity,
-        impact=payload.impact,
-        project_color=payload.project_color,
-    )
-    return {
-        "status": "ok",
-        "id": item.id,
+        "repo": repo_name,
+        "commits_processed": len(items_created),
+        "items": items_created,
         "sse_clients": len(sse_clients),
     }
 
 
 @app.get("/api/stream")
 async def stream_activity(request: Request):
-    """SSE — Solo retransmite datos reales del webhook."""
     from sse_starlette.sse import EventSourceResponse
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=64)
@@ -491,36 +474,18 @@ async def stream_activity(request: Request):
 @app.post("/api/chat")
 async def chat_endpoint(payload: ChatMessage):
     """
-    Chatbot Graph-RAG.
-    Lee graph.json real → busca contexto → envía a Gemini (o responde local).
+    Graph-RAG: usa las notas del Vault Obsidian como contexto
+    para que Gemini 1.5 Flash responda preguntas sobre el proyecto.
     """
-    graph = load_graph()
-    context = search_graph_context(payload.message, graph)
-
+    context = _get_vault_text_context(payload.message)
     response_text, source = await _call_gemini(payload.message, context)
-
+    graph = parse_vault()
     return {
         "response": response_text,
-        "context_count": len(context),
         "source": source,
         "graph_nodes": len(graph.get("nodes", [])),
-        "graph_edges": len(graph.get("hyperedges", [])),
+        "graph_edges": len(graph.get("edges", [])),
         "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-
-
-@app.get("/api/health")
-async def health_check():
-    graph = load_graph()
-    return {
-        "status": "ok",
-        "version": "3.0.0",
-        "graph_loaded": bool(graph.get("nodes") or graph.get("hyperedges")),
-        "graph_nodes": len(graph.get("nodes", [])),
-        "graph_edges": len(graph.get("hyperedges", [])),
-        "activity_log_size": len(activity_log),
-        "sse_clients_connected": len(sse_clients),
-        "gemini_configured": bool(GEMINI_API_KEY),
     }
 
 
