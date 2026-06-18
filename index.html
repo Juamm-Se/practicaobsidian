@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graphify Core — Dashboard</title>
+    <title>Graphify Core</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,532 +13,434 @@
             theme: {
                 extend: {
                     colors: {
-                        surface: {
-                            0: '#09090b',
-                            1: '#111114',
-                            2: '#18181b',
-                            3: '#1f1f23',
-                            4: '#27272a',
-                        },
-                        accent: {
-                            DEFAULT: '#6366f1',
-                            light: '#818cf8',
-                            muted: '#4f46e5',
-                        },
+                        bg:   { DEFAULT: '#08080a', raised: '#0c0c0e', surface: '#101013', hover: '#141418' },
+                        brd:  { DEFAULT: '#1c1c21', light: '#2a2a30' },
+                        acc:  { DEFAULT: '#6366f1', light: '#818cf8', dim: '#4f46e5', glow: 'rgba(99,102,241,0.15)' },
                         live: '#22c55e',
                     },
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
                     },
                 },
             },
         }
     </script>
 
-    <!-- Inter Font -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <style>
         /* ── Base ────────────────────────────────────── */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', system-ui, sans-serif;
-            background: #09090b;
-            color: #e4e4e7;
+            background: #08080a;
+            color: #d4d4d8;
             overflow: hidden;
             height: 100vh;
         }
 
         /* ── Scrollbar ───────────────────────────────── */
-        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 8px; }
         ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
-        /* ── Live Indicator ──────────────────────────── */
+        /* ── Live pulse ──────────────────────────────── */
         @keyframes pulse-live {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.5); }
+            50% { opacity: .4; transform: scale(1.6); }
         }
-        .live-dot { animation: pulse-live 2s ease-in-out infinite; }
+        .live-pulse { animation: pulse-live 2s ease-in-out infinite; }
 
-        /* ── Row slide-in ────────────────────────────── */
+        /* ── Row animations ──────────────────────────── */
         @keyframes slide-in {
-            from { opacity: 0; transform: translateY(-12px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .row-enter { animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-        /* ── Row highlight flash ─────────────────────── */
         @keyframes row-flash {
-            0% { background: rgba(99, 102, 241, 0.12); }
+            0%   { background: rgba(99,102,241,0.10); }
             100% { background: transparent; }
         }
-        .row-flash { animation: row-flash 1.5s ease-out forwards; }
+        .row-enter { animation: slide-in 0.35s cubic-bezier(0.16,1,0.3,1) forwards, row-flash 1.6s ease-out forwards; }
 
-        /* ── Tab underline ───────────────────────────── */
-        .tab-btn { position: relative; transition: color 0.2s; }
-        .tab-btn::after {
-            content: '';
-            position: absolute;
-            bottom: -1px; left: 0;
-            width: 100%; height: 2px;
-            background: transparent;
-            border-radius: 2px;
-            transition: background 0.2s;
-        }
-        .tab-btn.active { color: #e4e4e7; }
-        .tab-btn.active::after { background: #6366f1; }
-
-        /* ── Chat message animation ──────────────────── */
+        /* ── Chat animation ──────────────────────────── */
         @keyframes fade-up {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .msg-enter { animation: fade-up 0.3s ease-out forwards; }
+        .msg-enter { animation: fade-up 0.25s ease-out forwards; }
 
-        /* ── Sidebar nav item ────────────────────────── */
+        /* ── Sidebar nav ─────────────────────────────── */
         .nav-item {
-            transition: all 0.15s;
+            transition: all 0.12s;
             border-left: 2px solid transparent;
         }
-        .nav-item:hover {
-            background: rgba(99, 102, 241, 0.06);
-            border-left-color: rgba(99, 102, 241, 0.3);
-        }
-        .nav-item.active {
-            background: rgba(99, 102, 241, 0.08);
-            border-left-color: #6366f1;
-            color: #e4e4e7;
-        }
+        .nav-item:hover { background: rgba(99,102,241,0.05); border-left-color: rgba(99,102,241,0.25); }
+        .nav-item.active { background: rgba(99,102,241,0.07); border-left-color: #6366f1; color: #e4e4e7; }
 
         /* ── Impact badges ───────────────────────────── */
-        .impact-alto { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
-        .impact-medio { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
-        .impact-bajo { background: rgba(34, 197, 94, 0.12); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+        .impact-alto  { background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.18); }
+        .impact-medio { background: rgba(245,158,11,0.08); color: #fbbf24; border: 1px solid rgba(245,158,11,0.18); }
+        .impact-bajo  { background: rgba(34,197,94,0.08);  color: #4ade80; border: 1px solid rgba(34,197,94,0.18); }
 
         /* ── Project badges ──────────────────────────── */
-        .badge-blue { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
-        .badge-violet { background: rgba(139, 92, 246, 0.12); color: #a78bfa; }
-        .badge-green { background: rgba(34, 197, 94, 0.12); color: #4ade80; }
-        .badge-amber { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
-        .badge-rose { background: rgba(244, 63, 94, 0.12); color: #fb7185; }
+        .badge-blue   { background: rgba(59,130,246,0.10);  color: #60a5fa; }
+        .badge-violet { background: rgba(139,92,246,0.10);  color: #a78bfa; }
+        .badge-green  { background: rgba(34,197,94,0.10);   color: #4ade80; }
+        .badge-amber  { background: rgba(245,158,11,0.10);  color: #fbbf24; }
+        .badge-rose   { background: rgba(244,63,94,0.10);   color: #fb7185; }
 
         /* ── Typing indicator ────────────────────────── */
         @keyframes typing-bounce {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-4px); }
+            0%,60%,100% { transform: translateY(0); }
+            30%         { transform: translateY(-3px); }
         }
         .typing-dot {
-            display: inline-block;
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: #6366f1;
+            display: inline-block; width: 5px; height: 5px;
+            border-radius: 50%; background: #6366f1;
             animation: typing-bounce 1.4s infinite;
         }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
 
         /* ── Graph iframe ────────────────────────────── */
         .graph-iframe {
-            border: none;
-            width: 100%;
-            height: 100%;
-            background: #09090b;
-            border-radius: 0;
+            border: none; width: 100%; height: 100%;
+            background: #08080a;
         }
 
-        /* ── Empty state ─────────────────────────────── */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-            padding: 3rem;
-        }
+        /* ── SSE status dot ──────────────────────────── */
+        .sse-dot { width: 6px; height: 6px; border-radius: 50%; transition: background 0.3s; flex-shrink: 0; }
+        .sse-on  { background: #22c55e; }
+        .sse-off { background: #ef4444; }
+        .sse-wait{ background: #f59e0b; animation: pulse-live 1s ease-in-out infinite; }
 
-        /* ── SSE connection status ───────────────────── */
-        .sse-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            transition: background 0.3s;
+        /* ── Resizer handle ──────────────────────────── */
+        .resizer {
+            height: 1px; background: #1c1c21;
+            cursor: row-resize; position: relative; flex-shrink: 0;
         }
-        .sse-connected { background: #22c55e; }
-        .sse-disconnected { background: #ef4444; }
-        .sse-connecting { background: #f59e0b; animation: pulse-live 1s ease-in-out infinite; }
+        .resizer::after {
+            content: ''; position: absolute;
+            left: 50%; top: -4px; transform: translateX(-50%);
+            width: 32px; height: 8px; border-radius: 4px;
+            background: transparent; transition: background 0.2s;
+        }
+        .resizer:hover::after { background: rgba(99,102,241,0.15); }
     </style>
 </head>
 
-<body class="flex h-screen bg-surface-0">
+<body class="flex h-screen bg-bg">
 
-    <!-- ╔══════════════════════════════════════════════╗
-         ║  SIDEBAR IZQUIERDO                          ║
-         ╚══════════════════════════════════════════════╝ -->
-    <aside class="w-56 flex-shrink-0 border-r border-zinc-800/60 bg-surface-1 flex flex-col">
+    <!-- ╔══════════════════════════════════════════╗
+         ║  SIDEBAR IZQUIERDO                      ║
+         ╚══════════════════════════════════════════╝ -->
+    <aside class="w-[52px] flex-shrink-0 border-r border-brd bg-bg-raised flex flex-col items-center">
         <!-- Logo -->
-        <div class="px-5 py-5 border-b border-zinc-800/60">
-            <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
-                    <svg class="w-4.5 h-4.5 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="text-sm font-semibold text-zinc-100 tracking-tight">Graphify</h1>
-                    <span class="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">Core</span>
-                </div>
+        <div class="w-full h-12 flex items-center justify-center border-b border-brd">
+            <div class="w-7 h-7 rounded-lg bg-acc/15 flex items-center justify-center">
+                <i data-lucide="zap" class="w-3.5 h-3.5 text-acc-light"></i>
             </div>
         </div>
 
-        <!-- Navigation -->
-        <nav class="flex-1 py-3 px-2 space-y-0.5">
-            <button onclick="switchView('activity')" id="nav-activity"
-                class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-zinc-400">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Actividad en Vivo
+        <!-- Nav icons -->
+        <nav class="flex-1 flex flex-col items-center pt-3 gap-1 w-full px-1.5">
+            <button onclick="switchView('console')" id="nav-console" title="Consola Unificada"
+                class="nav-item active w-full flex items-center justify-center py-2 rounded-md text-zinc-500">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
             </button>
-            <button onclick="switchView('graph')" id="nav-graph"
-                class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-zinc-400">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-                </svg>
-                Ver Grafo
+            <button onclick="switchView('graph')" id="nav-graph" title="Ver Grafo"
+                class="nav-item w-full flex items-center justify-center py-2 rounded-md text-zinc-500">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
             </button>
-            <button onclick="switchView('docs')" id="nav-docs"
-                class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-zinc-400">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                Documentación
+            <button onclick="switchView('docs')" id="nav-docs" title="Documentación"
+                class="nav-item w-full flex items-center justify-center py-2 rounded-md text-zinc-500">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
             </button>
         </nav>
 
-        <!-- SSE Status -->
-        <div class="px-4 py-3 border-t border-zinc-800/60">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="sse-dot sse-connecting" id="sse-status-dot"></span>
-                <span class="text-[10px] text-zinc-500" id="sse-status-text">Conectando SSE...</span>
-            </div>
+        <!-- SSE indicator -->
+        <div class="pb-2 flex flex-col items-center gap-1.5">
+            <span class="sse-dot sse-wait" id="sse-dot"></span>
         </div>
 
-        <!-- Footer -->
-        <div class="px-4 py-4 border-t border-zinc-800/60">
-            <div class="flex items-center gap-2">
-                <div class="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-[10px] font-semibold text-accent-light">
-                    U
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-medium text-zinc-300 truncate">Usuario Demo</p>
-                    <p class="text-[10px] text-zinc-500">admin@graphify</p>
-                </div>
+        <!-- Profile -->
+        <div class="w-full py-3 border-t border-brd flex items-center justify-center">
+            <div class="w-6 h-6 rounded-full bg-acc/20 flex items-center justify-center text-[9px] font-semibold text-acc-light">
+                U
             </div>
         </div>
     </aside>
 
-    <!-- ╔══════════════════════════════════════════════╗
-         ║  ÁREA PRINCIPAL                             ║
-         ╚══════════════════════════════════════════════╝ -->
+    <!-- ╔══════════════════════════════════════════╗
+         ║  ÁREA PRINCIPAL                         ║
+         ╚══════════════════════════════════════════╝ -->
     <div class="flex-1 flex flex-col min-w-0">
 
-        <!-- ── Header ────────────────────────────────── -->
-        <header class="h-14 flex-shrink-0 border-b border-zinc-800/60 bg-surface-1/50 backdrop-blur-sm flex items-center justify-between px-6">
-            <div class="flex items-center gap-4">
-                <h2 class="text-sm font-semibold text-zinc-100 tracking-tight" id="header-title">Actividad en Vivo</h2>
-                <!-- Live indicator -->
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-live/10 border border-live/20">
-                    <span class="live-dot w-1.5 h-1.5 rounded-full bg-live"></span>
-                    <span class="text-[11px] font-medium text-live">En Vivo</span>
+        <!-- ── Topbar ────────────────────────────────── -->
+        <header class="h-11 flex-shrink-0 border-b border-brd bg-bg-raised/60 backdrop-blur-sm flex items-center justify-between px-5">
+            <div class="flex items-center gap-3">
+                <h1 class="text-[13px] font-semibold text-zinc-100 tracking-tight">Graphify Core</h1>
+                <span class="text-[10px] font-mono text-zinc-600 bg-bg-surface px-1.5 py-0.5 rounded">v2.0</span>
+                <!-- Streaming indicator -->
+                <div class="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-live/8 border border-live/15">
+                    <span class="live-pulse w-1.5 h-1.5 rounded-full bg-live"></span>
+                    <span class="text-[10px] font-medium text-live/90">Streaming</span>
                 </div>
             </div>
-            <div class="flex items-center gap-3 text-xs text-zinc-500">
-                <span id="clock" class="font-mono"></span>
-                <div class="w-px h-4 bg-zinc-800"></div>
-                <span class="font-mono">v1.0.0</span>
+            <div class="flex items-center gap-3 text-[10px] text-zinc-600">
+                <span id="clock" class="font-mono tabular-nums"></span>
             </div>
         </header>
 
-        <!-- ── Content Area ──────────────────────────── -->
+        <!-- ── Content ───────────────────────────────── -->
         <div class="flex-1 flex min-h-0">
 
-            <!-- Main Content Column -->
+            <!-- Central Column (Graph + Table) -->
             <div class="flex-1 flex flex-col min-w-0">
 
-                <!-- Tabs -->
-                <div class="flex-shrink-0 border-b border-zinc-800/60 bg-surface-1/30 px-6 flex items-center gap-1" id="tabs-bar">
-                    <button onclick="switchTab('table')" class="tab-btn active px-4 py-3 text-sm font-medium text-zinc-400" data-tab="table">
-                        Tabla de Actividad
-                    </button>
-                    <button onclick="switchTab('graphview')" class="tab-btn px-4 py-3 text-sm font-medium text-zinc-400" data-tab="graphview">
-                        Ver Grafo
-                    </button>
+                <!-- Upper: Graph iframe (45%) -->
+                <div class="relative" style="height: 45%;" id="graph-panel">
+                    <iframe
+                        src="/graph-view"
+                        class="graph-iframe"
+                        id="graph-iframe"
+                        title="Knowledge Graph"
+                        loading="lazy"
+                    ></iframe>
+                    <!-- Overlay label -->
+                    <div class="absolute top-3 left-4 flex items-center gap-2 pointer-events-none select-none">
+                        <span class="text-[10px] font-medium text-zinc-500 bg-bg/70 backdrop-blur-sm px-2 py-0.5 rounded border border-brd/50">
+                            Knowledge Graph
+                        </span>
+                    </div>
                 </div>
 
-                <!-- Tab Content -->
-                <div class="flex-1 overflow-hidden">
+                <!-- Resizer handle -->
+                <div class="resizer" id="resizer"></div>
 
-                    <!-- TAB 1: Activity Table -->
-                    <div id="tab-table" class="h-full flex flex-col">
-                        <!-- Table Header -->
-                        <div class="flex-shrink-0 px-6 pt-4 pb-2 flex items-center justify-between">
-                            <p class="text-xs text-zinc-500 font-medium">
-                                <span id="activity-count">0</span> eventos registrados
-                            </p>
-                            <div class="flex items-center gap-2">
-                                <button onclick="clearActivity()" class="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-800/50 transition-colors">
-                                    Limpiar
-                                </button>
-                            </div>
+                <!-- Lower: Activity Table (55%) -->
+                <div class="flex-1 flex flex-col min-h-0" id="table-panel">
+                    <!-- Table header bar -->
+                    <div class="flex-shrink-0 px-5 py-2 flex items-center justify-between border-b border-brd/50">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="activity" class="w-3 h-3 text-zinc-500"></i>
+                            <span class="text-[11px] font-medium text-zinc-400">Actividad en Tiempo Real</span>
                         </div>
-
-                        <!-- Table -->
-                        <div class="flex-1 overflow-y-auto px-6 pb-6" id="table-container">
-                            <!-- Empty state (shown when no data) -->
-                            <div id="empty-state" class="empty-state">
-                                <div class="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mb-5">
-                                    <svg class="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
-                                    </svg>
-                                </div>
-                                <h3 class="text-sm font-semibold text-zinc-400 mb-1">Sin actividad registrada</h3>
-                                <p class="text-xs text-zinc-600 max-w-sm leading-relaxed mb-4">
-                                    Los eventos aparecerán aquí en tiempo real cuando se envíen datos al webhook.
-                                </p>
-                                <div class="bg-surface-3 rounded-lg p-3 text-left max-w-lg w-full">
-                                    <p class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-2">Ejemplo con curl:</p>
-                                    <code class="text-[11px] font-mono text-zinc-400 leading-relaxed block whitespace-pre-wrap">curl -X POST http://localhost:8000/api/webhook/git \
-  -H "Content-Type: application/json" \
-  -d '{"developer":"Juan Pérez","project":"Graphify API","activity":"Implementó búsqueda semántica","impact":"Alto"}'</code>
-                                </div>
-                            </div>
-
-                            <!-- Table (hidden initially) -->
-                            <table class="w-full hidden" id="activity-table">
-                                <thead class="sticky top-0 z-10">
-                                    <tr class="text-[11px] uppercase tracking-wider text-zinc-500 font-medium">
-                                        <th class="text-left py-3 pr-4 bg-surface-0 w-[200px]">Desarrollador</th>
-                                        <th class="text-left py-3 pr-4 bg-surface-0 w-[170px]">Proyecto</th>
-                                        <th class="text-left py-3 pr-4 bg-surface-0">Actividad</th>
-                                        <th class="text-left py-3 pr-4 bg-surface-0 w-[100px]">Hora</th>
-                                        <th class="text-left py-3 bg-surface-0 w-[90px]">Impacto</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="activity-body" class="divide-y divide-zinc-800/40">
-                                </tbody>
-                            </table>
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] text-zinc-600 font-mono"><span id="activity-count">0</span> eventos</span>
+                            <button onclick="clearActivity()" class="text-[10px] text-zinc-600 hover:text-zinc-300 transition-colors">
+                                Limpiar
+                            </button>
                         </div>
                     </div>
 
-                    <!-- TAB 2: Graph View (iframe con grafo real) -->
-                    <div id="tab-graphview" class="h-full hidden">
-                        <iframe
-                            src="/graph"
-                            class="graph-iframe"
-                            id="graph-iframe"
-                            title="Knowledge Graph — Graphify"
-                            loading="lazy"
-                        ></iframe>
+                    <!-- Table -->
+                    <div class="flex-1 overflow-y-auto" id="table-scroll">
+                        <!-- Empty state -->
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-full text-center px-6">
+                            <div class="w-12 h-12 rounded-xl bg-bg-surface flex items-center justify-center mb-4">
+                                <i data-lucide="inbox" class="w-5 h-5 text-zinc-600"></i>
+                            </div>
+                            <p class="text-[12px] text-zinc-500 mb-1">Sin actividad registrada</p>
+                            <p class="text-[10px] text-zinc-600 max-w-sm leading-relaxed mb-4">
+                                Los eventos aparecerán aquí en tiempo real cuando se envíen datos al webhook.
+                            </p>
+                            <div class="bg-bg-surface rounded-lg p-3 text-left max-w-lg w-full border border-brd/40">
+                                <p class="text-[9px] uppercase tracking-wider text-zinc-600 font-medium mb-1.5">Ejemplo con curl:</p>
+                                <code class="text-[10px] font-mono text-zinc-500 leading-relaxed block whitespace-pre-wrap">curl -X POST http://localhost:8000/api/webhook/git \
+  -H "Content-Type: application/json" \
+  -d '{"developer":"Juan Perez","project":"Graphify API","activity":"Deploy exitoso","impact":"Alto"}'</code>
+                            </div>
+                        </div>
+
+                        <!-- Table (hidden initially) -->
+                        <table class="w-full hidden" id="activity-table">
+                            <thead class="sticky top-0 z-10">
+                                <tr class="text-[10px] uppercase tracking-wider text-zinc-600 font-medium">
+                                    <th class="text-left py-2.5 px-5 bg-bg w-[180px]">Desarrollador</th>
+                                    <th class="text-left py-2.5 px-3 bg-bg w-[150px]">Proyecto</th>
+                                    <th class="text-left py-2.5 px-3 bg-bg">Actividad</th>
+                                    <th class="text-left py-2.5 px-3 bg-bg w-[80px]">Hora</th>
+                                    <th class="text-left py-2.5 px-5 bg-bg w-[80px]">Impacto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activity-body" class="divide-y divide-brd/30"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- ╔══════════════════════════════════════════╗
-                 ║  PANEL DERECHO — CHATBOT IA            ║
-                 ╚══════════════════════════════════════════╝ -->
-            <aside class="w-80 flex-shrink-0 border-l border-zinc-800/60 bg-surface-1 flex flex-col">
-                <!-- Chat Header -->
-                <div class="px-4 py-3.5 border-b border-zinc-800/60 flex items-center gap-3">
-                    <div class="w-7 h-7 rounded-lg bg-accent/15 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                        </svg>
+            <!-- ╔══════════════════════════════════════╗
+                 ║  PANEL DERECHO — CHATBOT IA         ║
+                 ╚══════════════════════════════════════╝ -->
+            <aside class="w-[320px] flex-shrink-0 border-l border-brd bg-bg-raised flex flex-col">
+                <!-- Chat header -->
+                <div class="px-4 py-3 border-b border-brd flex items-center gap-2.5">
+                    <div class="w-6 h-6 rounded-md bg-acc/12 flex items-center justify-center">
+                        <i data-lucide="brain" class="w-3 h-3 text-acc-light"></i>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-zinc-200">Graphify AI</p>
-                        <p class="text-[10px] text-zinc-500">Graph-RAG · Contexto de graph.json</p>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[12px] font-semibold text-zinc-200">Graphify AI Engine</p>
+                        <p class="text-[9px] text-zinc-600">Graph-RAG · Gemini 1.5 Flash</p>
                     </div>
-                    <div class="ml-auto flex items-center gap-1">
+                    <div class="flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-live"></span>
-                        <span class="text-[10px] text-zinc-500">Online</span>
                     </div>
                 </div>
 
-                <!-- Chat Messages -->
-                <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                    <!-- Welcome message -->
-                    <div class="msg-enter flex gap-3">
-                        <div class="flex-shrink-0 w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center mt-0.5">
-                            <svg class="w-3 h-3 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                            </svg>
+                <!-- Messages -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto px-3.5 py-3 space-y-3">
+                    <div class="msg-enter flex gap-2.5">
+                        <div class="flex-shrink-0 w-5 h-5 rounded-md bg-acc/12 flex items-center justify-center mt-0.5">
+                            <i data-lucide="brain" class="w-2.5 h-2.5 text-acc-light"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm text-zinc-300 leading-relaxed">
-                                Soy el asistente Graph-RAG. Consulto tu <code class="font-mono text-[11px] bg-accent/10 text-accent-light px-1 py-0.5 rounded">graph.json</code> real para responder.
-                                <span class="text-zinc-500">Prueba con: <em class="text-accent-light">press, espalda, hipertrofia, recuperación, rutina</em></span>
+                            <p class="text-[12px] text-zinc-400 leading-relaxed">
+                                Consulta tu knowledge graph. Prueba con <em class="text-acc-light not-italic">press, espalda, hipertrofia, rutina, recuperación</em>.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Chat Input -->
-                <div class="px-3 py-3 border-t border-zinc-800/60">
+                <!-- Input -->
+                <div class="px-3 py-2.5 border-t border-brd">
                     <form id="chat-form" class="relative">
                         <input
                             id="chat-input"
                             type="text"
-                            placeholder="Pregunta algo sobre el grafo..."
-                            class="w-full bg-surface-3 border border-zinc-800/80 rounded-lg pl-4 pr-11 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+                            placeholder="Pregunta al grafo..."
+                            class="w-full bg-bg-surface border border-brd/80 rounded-lg pl-3 pr-9 py-2 text-[12px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-acc/40 focus:ring-1 focus:ring-acc/15 transition-all"
                             autocomplete="off"
                         />
-                        <button
-                            type="submit"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md bg-accent/15 hover:bg-accent/25 flex items-center justify-center transition-colors"
-                        >
-                            <svg class="w-3.5 h-3.5 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/>
-                            </svg>
+                        <button type="submit"
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-acc/10 hover:bg-acc/20 flex items-center justify-center transition-colors">
+                            <i data-lucide="arrow-up" class="w-3 h-3 text-acc-light"></i>
                         </button>
                     </form>
-                    <p class="text-[10px] text-zinc-600 mt-1.5 text-center">Graph-RAG · graph.json real · Gemini: placeholder</p>
+                    <p class="text-[9px] text-zinc-700 mt-1 text-center">graph.json · Gemini 1.5 Flash</p>
                 </div>
             </aside>
         </div>
     </div>
 
-    <!-- ╔══════════════════════════════════════════════╗
-         ║  JAVASCRIPT — 100% Real, sin datos falsos   ║
-         ╚══════════════════════════════════════════════╝ -->
+    <!-- ╔══════════════════════════════════════════╗
+         ║  JAVASCRIPT                              ║
+         ╚══════════════════════════════════════════╝ -->
     <script>
     (() => {
         'use strict';
 
-        // ─── State ─────────────────────────────────
         const API = window.location.origin;
         let sseSource = null;
 
-        // ─── DOM References ────────────────────────
-        const $body        = document.getElementById('activity-body');
-        const $table       = document.getElementById('activity-table');
-        const $emptyState  = document.getElementById('empty-state');
-        const $count       = document.getElementById('activity-count');
-        const $chatMsgs    = document.getElementById('chat-messages');
-        const $chatForm    = document.getElementById('chat-form');
-        const $chatInput   = document.getElementById('chat-input');
-        const $clock       = document.getElementById('clock');
-        const $headerTitle = document.getElementById('header-title');
-        const $sseDot      = document.getElementById('sse-status-dot');
-        const $sseText     = document.getElementById('sse-status-text');
+        // ─── DOM ────────────────────────────────────
+        const $body       = document.getElementById('activity-body');
+        const $table      = document.getElementById('activity-table');
+        const $empty      = document.getElementById('empty-state');
+        const $count      = document.getElementById('activity-count');
+        const $chatMsgs   = document.getElementById('chat-messages');
+        const $chatForm   = document.getElementById('chat-form');
+        const $chatInput  = document.getElementById('chat-input');
+        const $clock      = document.getElementById('clock');
+        const $sseDot     = document.getElementById('sse-dot');
 
-        // ─── Clock ─────────────────────────────────
-        function updateClock() {
+        // ─── Init Lucide icons ──────────────────────
+        lucide.createIcons();
+
+        // ─── Clock ──────────────────────────────────
+        function tick() {
             $clock.textContent = new Date().toLocaleTimeString('es-CO', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit'
             });
         }
-        updateClock();
-        setInterval(updateClock, 1000);
+        tick(); setInterval(tick, 1000);
 
-        // ─── SSE Connection Status ─────────────────
-        function setSseStatus(status) {
+        // ─── SSE status ─────────────────────────────
+        function sseStatus(s) {
             $sseDot.className = 'sse-dot';
-            if (status === 'connected') {
-                $sseDot.classList.add('sse-connected');
-                $sseText.textContent = 'SSE Conectado';
-            } else if (status === 'disconnected') {
-                $sseDot.classList.add('sse-disconnected');
-                $sseText.textContent = 'SSE Desconectado';
-            } else {
-                $sseDot.classList.add('sse-connecting');
-                $sseText.textContent = 'Conectando SSE...';
-            }
+            $sseDot.classList.add(s === 'on' ? 'sse-on' : s === 'off' ? 'sse-off' : 'sse-wait');
         }
 
-        // ─── Tab Switching ─────────────────────────
-        window.switchTab = function(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.tab === tab);
-            });
-            document.getElementById('tab-table').classList.toggle('hidden', tab !== 'table');
-            document.getElementById('tab-graphview').classList.toggle('hidden', tab !== 'graphview');
-
-            // Reload iframe when switching to graph tab
-            if (tab === 'graphview') {
+        // ─── Navigation ─────────────────────────────
+        window.switchView = function(v) {
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.getElementById(`nav-${v}`).classList.add('active');
+            if (v === 'graph') {
                 const iframe = document.getElementById('graph-iframe');
-                if (iframe.src !== `${API}/graph`) {
-                    iframe.src = `${API}/graph`;
-                }
+                if (!iframe.src.endsWith('/graph-view')) iframe.src = '/graph-view';
             }
         };
 
-        // ─── Sidebar Navigation ────────────────────
-        window.switchView = function(view) {
-            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`nav-${view}`).classList.add('active');
+        // ─── Resizer ────────────────────────────────
+        const $resizer = document.getElementById('resizer');
+        const $graphP  = document.getElementById('graph-panel');
+        const $tableP  = document.getElementById('table-panel');
+        let resizing = false;
 
-            const titles = { activity: 'Actividad en Vivo', graph: 'Ver Grafo', docs: 'Documentación' };
-            $headerTitle.textContent = titles[view] || 'Dashboard';
+        $resizer.addEventListener('mousedown', (e) => {
+            resizing = true;
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
 
-            if (view === 'activity') switchTab('table');
-            else if (view === 'graph') switchTab('graphview');
-            else if (view === 'docs') switchTab('table');
-        };
+        document.addEventListener('mousemove', (e) => {
+            if (!resizing) return;
+            const parent = $graphP.parentElement;
+            const rect = parent.getBoundingClientRect();
+            const offset = e.clientY - rect.top;
+            const pct = Math.max(15, Math.min(80, (offset / rect.height) * 100));
+            $graphP.style.height = pct + '%';
+        });
 
-        // ─── Activity Table ────────────────────────
-        function formatTime(isoStr) {
-            return new Date(isoStr).toLocaleTimeString('es-CO', {
-                hour: '2-digit', minute: '2-digit'
-            });
-        }
+        document.addEventListener('mouseup', () => {
+            if (resizing) {
+                resizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
 
-        function escapeHtml(text) {
-            const d = document.createElement('div');
-            d.textContent = text;
-            return d.innerHTML;
-        }
+        // ─── Table helpers ──────────────────────────
+        function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+        function fmtTime(iso) { return new Date(iso).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' }); }
 
-        function updateEmptyState() {
-            const hasRows = $body.children.length > 0;
-            $emptyState.classList.toggle('hidden', hasRows);
-            $table.classList.toggle('hidden', !hasRows);
+        function updateEmpty() {
+            const has = $body.children.length > 0;
+            $empty.classList.toggle('hidden', has);
+            $table.classList.toggle('hidden', !has);
             $count.textContent = $body.children.length;
         }
 
-        function createRow(item, animate = false) {
-            const impactClass = `impact-${item.impact.toLowerCase()}`;
-            const badgeClass = `badge-${item.project_color}`;
+        function createRow(item, animate) {
             const tr = document.createElement('tr');
-            tr.className = `group ${animate ? 'row-enter row-flash' : ''} hover:bg-zinc-800/20 transition-colors`;
+            tr.className = `group ${animate ? 'row-enter' : ''} hover:bg-bg-hover transition-colors`;
             tr.innerHTML = `
-                <td class="py-3 pr-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center text-[10px] font-semibold text-accent-light flex-shrink-0">
-                            ${escapeHtml(item.developer_avatar)}
-                        </div>
-                        <span class="text-sm text-zinc-300 font-medium">${escapeHtml(item.developer)}</span>
+                <td class="py-2.5 px-5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-6 h-6 rounded-full bg-acc/12 flex items-center justify-center text-[9px] font-semibold text-acc-light flex-shrink-0">${esc(item.developer_avatar)}</div>
+                        <span class="text-[12px] text-zinc-300 font-medium">${esc(item.developer)}</span>
                     </div>
                 </td>
-                <td class="py-3 pr-4">
-                    <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium ${badgeClass}">
-                        ${escapeHtml(item.project)}
-                    </span>
+                <td class="py-2.5 px-3">
+                    <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium badge-${item.project_color}">${esc(item.project)}</span>
                 </td>
-                <td class="py-3 pr-4">
-                    <span class="text-sm text-zinc-400 group-hover:text-zinc-300 transition-colors">${escapeHtml(item.activity)}</span>
+                <td class="py-2.5 px-3">
+                    <span class="text-[12px] text-zinc-500 group-hover:text-zinc-300 transition-colors">${esc(item.activity)}</span>
                 </td>
-                <td class="py-3 pr-4">
-                    <span class="text-xs font-mono text-zinc-500">${formatTime(item.timestamp)}</span>
+                <td class="py-2.5 px-3">
+                    <span class="text-[10px] font-mono text-zinc-600 tabular-nums">${fmtTime(item.timestamp)}</span>
                 </td>
-                <td class="py-3">
-                    <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium ${impactClass}">
-                        ${escapeHtml(item.impact)}
-                    </span>
+                <td class="py-2.5 px-5">
+                    <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium impact-${item.impact.toLowerCase()}">${esc(item.impact)}</span>
                 </td>
             `;
             return tr;
@@ -546,181 +448,137 @@
 
         function prependActivity(item) {
             const row = createRow(item, true);
-            if ($body.firstChild) {
-                $body.insertBefore(row, $body.firstChild);
-            } else {
-                $body.appendChild(row);
-            }
-            updateEmptyState();
-            // Remove animation classes after they play
-            setTimeout(() => {
-                row.classList.remove('row-enter', 'row-flash');
-            }, 1600);
+            if ($body.firstChild) $body.insertBefore(row, $body.firstChild);
+            else $body.appendChild(row);
+            updateEmpty();
+            setTimeout(() => row.classList.remove('row-enter'), 1800);
         }
 
-        window.clearActivity = function() {
-            $body.innerHTML = '';
-            updateEmptyState();
-        };
+        window.clearActivity = function() { $body.innerHTML = ''; updateEmpty(); };
 
-        // ─── Load Initial Activity (from backend) ──
+        // ─── Load initial ───────────────────────────
         async function loadActivity() {
             try {
                 const res = await fetch(`${API}/api/activity`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                if (!res.ok) return;
                 const items = await res.json();
-                if (items.length > 0) {
-                    // Render in reverse (oldest first) so newest ends up on top
-                    items.reverse().forEach(item => {
-                        $body.appendChild(createRow(item, false));
-                    });
-                    updateEmptyState();
+                if (items.length) {
+                    items.reverse().forEach(i => $body.appendChild(createRow(i, false)));
+                    updateEmpty();
                 }
-            } catch (err) {
-                console.warn('No se pudo cargar actividad:', err.message);
-                updateEmptyState();
-            }
+            } catch { updateEmpty(); }
         }
 
-        // ─── SSE: Real-time Connection ─────────────
+        // ─── SSE ────────────────────────────────────
         function connectSSE() {
-            setSseStatus('connecting');
-
+            sseStatus('wait');
             sseSource = new EventSource(`${API}/api/stream`);
 
             sseSource.addEventListener('activity', (e) => {
-                try {
-                    const item = JSON.parse(e.data);
-                    prependActivity(item);
-                } catch (err) {
-                    console.error('Error parseando evento SSE:', err);
-                }
+                try { prependActivity(JSON.parse(e.data)); } catch {}
             });
 
-            sseSource.addEventListener('ping', () => {
-                // Heartbeat — conexión viva
-            });
+            sseSource.addEventListener('ping', () => {});
 
-            sseSource.onopen = () => {
-                setSseStatus('connected');
-            };
+            sseSource.onopen = () => sseStatus('on');
 
             sseSource.onerror = () => {
-                setSseStatus('disconnected');
+                sseStatus('off');
                 sseSource.close();
-
-                // Auto-reconnect after 5 seconds
                 setTimeout(() => {
-                    if (!sseSource || sseSource.readyState === EventSource.CLOSED) {
-                        connectSSE();
-                    }
+                    if (!sseSource || sseSource.readyState === EventSource.CLOSED) connectSSE();
                 }, 5000);
             };
         }
 
-        // ─── Chat ──────────────────────────────────
-        function addChatMessage(content, isUser = false) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'msg-enter flex gap-3' + (isUser ? ' justify-end' : '');
+        // ─── Chat ───────────────────────────────────
+        function addMsg(content, isUser) {
+            const w = document.createElement('div');
+            w.className = 'msg-enter flex gap-2.5' + (isUser ? ' justify-end' : '');
 
             if (isUser) {
-                wrapper.innerHTML = `
+                w.innerHTML = `
                     <div class="flex-1 min-w-0 flex justify-end">
-                        <div class="bg-accent/15 border border-accent/20 rounded-lg rounded-br-sm px-3 py-2 max-w-[85%]">
-                            <p class="text-sm text-zinc-200 leading-relaxed">${escapeHtml(content)}</p>
+                        <div class="bg-acc/12 border border-acc/15 rounded-lg rounded-br-sm px-3 py-1.5 max-w-[85%]">
+                            <p class="text-[12px] text-zinc-200 leading-relaxed">${esc(content)}</p>
                         </div>
                     </div>
-                    <div class="flex-shrink-0 w-6 h-6 rounded-md bg-zinc-700/50 flex items-center justify-center mt-0.5 text-[10px] font-semibold text-zinc-300">U</div>
+                    <div class="flex-shrink-0 w-5 h-5 rounded-md bg-zinc-800 flex items-center justify-center mt-0.5 text-[8px] font-semibold text-zinc-400">U</div>
                 `;
             } else {
-                wrapper.innerHTML = `
-                    <div class="flex-shrink-0 w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center mt-0.5">
-                        <svg class="w-3 h-3 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                        </svg>
+                w.innerHTML = `
+                    <div class="flex-shrink-0 w-5 h-5 rounded-md bg-acc/12 flex items-center justify-center mt-0.5">
+                        <i data-lucide="brain" class="w-2.5 h-2.5 text-acc-light"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm text-zinc-300 leading-relaxed">${content}</div>
+                        <div class="text-[12px] text-zinc-400 leading-relaxed">${content}</div>
                     </div>
                 `;
             }
 
-            $chatMsgs.appendChild(wrapper);
+            $chatMsgs.appendChild(w);
+            lucide.createIcons({ nodes: [w] });
             $chatMsgs.scrollTop = $chatMsgs.scrollHeight;
         }
 
-        function addTypingIndicator() {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'msg-enter flex gap-3';
-            wrapper.id = 'typing-indicator';
-            wrapper.innerHTML = `
-                <div class="flex-shrink-0 w-6 h-6 rounded-md bg-accent/15 flex items-center justify-center mt-0.5">
-                    <svg class="w-3 h-3 text-accent-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                    </svg>
+        function addTyping() {
+            const w = document.createElement('div');
+            w.className = 'msg-enter flex gap-2.5';
+            w.id = 'typing';
+            w.innerHTML = `
+                <div class="flex-shrink-0 w-5 h-5 rounded-md bg-acc/12 flex items-center justify-center mt-0.5">
+                    <i data-lucide="brain" class="w-2.5 h-2.5 text-acc-light"></i>
                 </div>
-                <div class="flex-1 min-w-0 flex items-center gap-1.5 py-2">
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
+                <div class="flex items-center gap-1 py-1.5">
+                    <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
                 </div>
             `;
-            $chatMsgs.appendChild(wrapper);
+            $chatMsgs.appendChild(w);
+            lucide.createIcons({ nodes: [w] });
             $chatMsgs.scrollTop = $chatMsgs.scrollHeight;
         }
 
-        function removeTypingIndicator() {
-            const el = document.getElementById('typing-indicator');
-            if (el) el.remove();
-        }
+        function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
 
-        function renderMarkdownLite(text) {
-            return text
-                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-zinc-100">$1</strong>')
-                .replace(/`(.*?)`/g, '<code class="font-mono text-[11px] bg-accent/10 text-accent-light px-1 py-0.5 rounded">$1</code>')
+        function mdLite(t) {
+            return t
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-zinc-200">$1</strong>')
+                .replace(/`(.*?)`/g, '<code class="font-mono text-[10px] bg-acc/8 text-acc-light px-1 py-0.5 rounded">$1</code>')
                 .replace(/\n- /g, '<br>• ')
                 .replace(/\n\n/g, '<br><br>')
-                .replace(/_(.*?)_/g, '<em class="text-zinc-500">$1</em>');
+                .replace(/_(.*?)_/g, '<em class="text-zinc-600">$1</em>');
         }
 
-        async function sendChat(message) {
-            addChatMessage(message, true);
+        async function sendChat(msg) {
+            addMsg(msg, true);
             $chatInput.value = '';
-            addTypingIndicator();
-
+            addTyping();
             try {
                 const res = await fetch(`${API}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message }),
+                    body: JSON.stringify({ message: msg }),
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                removeTypingIndicator();
-                addChatMessage(renderMarkdownLite(data.response), false);
+                removeTyping();
+                addMsg(mdLite(data.response), false);
             } catch (err) {
-                removeTypingIndicator();
-                addChatMessage(
-                    `No pude conectar al backend (<code class="font-mono text-xs bg-red-500/10 text-red-400 px-1 py-0.5 rounded">${escapeHtml(err.message)}</code>). Asegúrate de que <code class="font-mono text-xs bg-accent/10 text-accent-light px-1 py-0.5 rounded">python app.py</code> esté corriendo en el puerto 8000.`,
-                    false
-                );
+                removeTyping();
+                addMsg(`<span class="text-red-400">Error:</span> ${esc(err.message)}. ¿Está corriendo <code class="font-mono text-[10px] bg-acc/8 text-acc-light px-1 py-0.5 rounded">python app.py</code>?`, false);
             }
         }
 
         $chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const msg = $chatInput.value.trim();
-            if (!msg) return;
-            sendChat(msg);
+            const m = $chatInput.value.trim();
+            if (m) sendChat(m);
         });
 
-        // ─── Initialize ────────────────────────────
-        loadActivity().then(() => {
-            connectSSE();
-        });
+        // ─── Init ───────────────────────────────────
+        updateEmpty();
+        loadActivity().then(connectSSE);
 
-        // Initialize empty state
-        updateEmptyState();
     })();
     </script>
 </body>

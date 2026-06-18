@@ -1,26 +1,23 @@
 """
-Graphify Core — Backend FastAPI (Producción Real)
-==================================================
-Trazabilidad en tiempo real vía Webhook + SSE.
-Chatbot Graph-RAG con placeholder estructurado para Gemini API.
-Servicio del grafo interactivo real generado por Graphify.
+Graphify Core — Backend FastAPI v2.0
+=====================================
+Plataforma unificada: Grafo interactivo + Monitoreo SSE + Chatbot Gemini Graph-RAG.
 
 Endpoints:
-  GET  /                  → Sirve index.html (frontend SPA)
-  GET  /graph             → Sirve graphify-out/graph.html (grafo real)
-  GET  /api/activity      → Retorna historial de actividades reales
-  GET  /api/stream        → SSE: broadcast de nuevas actividades a clientes conectados
-  POST /api/webhook/git   → Webhook: recibe actividad real y la propaga vía SSE
-  POST /api/chat          → Chatbot Graph-RAG (lee graph.json real)
-  GET  /api/health        → Health check del servicio
-
-Sin datos falsos. Sin simuladores. 100% datos reales ingresados por webhook.
+  GET  /                → Sirve index.html (frontend)
+  GET  /graph-view      → Sirve graphify-out/graph.html (grafo real interactivo)
+  GET  /api/activity    → Historial de actividades reales
+  GET  /api/stream      → SSE: broadcast en tiempo real desde webhook
+  POST /api/webhook/git → Webhook: inyecta actividad real y propaga vía SSE
+  POST /api/chat        → Chatbot Graph-RAG con Gemini API + graph.json
+  GET  /api/health      → Health check
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -32,20 +29,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-# ──────────────────────────────────────────────
-# Configuración
-# ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════
+#  CONFIGURACIÓN — API KEY DE GEMINI
+#  ═══════════════════════════════════════════════════
+#  INYECTA TU API KEY AQUÍ o configúrala como variable
+#  de entorno:  set GEMINI_API_KEY=tu_clave_aqui
+#
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")   # ← API KEY AQUÍ
+GEMINI_MODEL   = "gemini-1.5-flash"
+# ═══════════════════════════════════════════════════
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR        = Path(__file__).resolve().parent
 GRAPH_JSON_PATH = BASE_DIR / "graphify-out" / "graph.json"
 GRAPH_HTML_PATH = BASE_DIR / "graphify-out" / "graph.html"
-FRONTEND_PATH = BASE_DIR / "index.html"
+FRONTEND_PATH   = BASE_DIR / "index.html"
 
-app = FastAPI(
-    title="Graphify Core",
-    version="1.0.0",
-    description="Dashboard interactivo — Trazabilidad real + Graph-RAG Chatbot",
-)
+app = FastAPI(title="Graphify Core", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,74 +61,48 @@ app.add_middleware(
 
 
 class WebhookPayload(BaseModel):
-    """
-    Payload que recibe el webhook de Git.
-
-    Campos obligatorios:
-      - developer: nombre del autor del commit/cambio
-      - project:   nombre del proyecto afectado
-      - activity:  descripción en lenguaje natural del cambio
-      - impact:    nivel de impacto ("Bajo" | "Medio" | "Alto")
-
-    Campos opcionales (se autogeneran si no se envían):
-      - project_color: color del badge en el dashboard
-    """
-
-    developer: str = Field(..., min_length=1, description="Nombre del desarrollador")
-    project: str = Field(..., min_length=1, description="Nombre del proyecto")
-    activity: str = Field(..., min_length=1, description="Descripción de la actividad")
-    impact: str = Field(..., pattern=r"^(Bajo|Medio|Alto)$", description="Nivel de impacto")
-    project_color: str | None = Field(
-        None,
-        description="Color del badge (blue, violet, green, amber, rose). Auto-asignado si no se envía.",
-    )
+    developer: str    = Field(..., min_length=1)
+    project: str      = Field(..., min_length=1)
+    activity: str     = Field(..., min_length=1)
+    impact: str       = Field(..., pattern=r"^(Bajo|Medio|Alto)$")
+    project_color: str | None = None
 
 
 class ChatMessage(BaseModel):
-    """Payload del chatbot."""
-
     message: str = Field(..., min_length=1)
 
 
 class ActivityItem(BaseModel):
-    """Fila de actividad almacenada y transmitida vía SSE."""
-
     id: str
     developer: str
     developer_avatar: str
     project: str
     project_color: str
     activity: str
-    timestamp: str  # ISO-8601
+    timestamp: str
     impact: str
 
 
 # ──────────────────────────────────────────────
-# Almacén en memoria de actividades
+# Almacén en memoria + Broadcast SSE
 # ──────────────────────────────────────────────
 
 activity_log: list[ActivityItem] = []
-MAX_ACTIVITY_LOG = 200  # Límite para no saturar RAM
-
-# ─── Cola de broadcast SSE ─────────────────
-# Cada cliente SSE conectado registra un asyncio.Queue aquí.
-# Cuando llega un webhook, se hace queue.put() a todas las colas.
+MAX_LOG = 200
 
 sse_clients: list[asyncio.Queue] = []
 
 
-def _broadcast(event: dict) -> None:
+def _broadcast(event_dict: dict) -> None:
     """Envía un evento a todos los clientes SSE conectados."""
-    data = json.dumps(event)
-    dead_queues: list[asyncio.Queue] = []
+    data = json.dumps(event_dict)
+    dead: list[asyncio.Queue] = []
     for q in sse_clients:
-        # Si la queue está llena (cliente lento), la descartamos
         if q.full():
-            dead_queues.append(q)
+            dead.append(q)
         else:
             q.put_nowait(data)
-    # Limpiar queues muertas
-    for q in dead_queues:
+    for q in dead:
         if q in sse_clients:
             sse_clients.remove(q)
 
@@ -138,50 +111,36 @@ def _broadcast(event: dict) -> None:
 # Utilidades
 # ──────────────────────────────────────────────
 
-# Mapeo de colores para proyectos conocidos
-_PROJECT_COLORS: dict[str, str] = {
-    "graphify": "blue",
-    "api": "blue",
-    "frontend": "violet",
-    "dashboard": "violet",
-    "pipeline": "green",
-    "data": "green",
-    "auth": "amber",
-    "infra": "rose",
-    "cloud": "rose",
-    "devops": "rose",
+_COLOR_MAP = {
+    "graphify": "blue", "api": "blue", "backend": "blue",
+    "frontend": "violet", "dashboard": "violet", "ui": "violet",
+    "pipeline": "green", "data": "green", "etl": "green",
+    "auth": "amber", "security": "amber", "login": "amber",
+    "infra": "rose", "cloud": "rose", "devops": "rose", "deploy": "rose",
 }
-_FALLBACK_COLORS = ["blue", "violet", "green", "amber", "rose"]
+_FALLBACK = ["blue", "violet", "green", "amber", "rose"]
 
 
-def _infer_project_color(project_name: str) -> str:
-    """Infiere el color del badge a partir del nombre del proyecto."""
-    name_lower = project_name.lower()
-    for keyword, color in _PROJECT_COLORS.items():
-        if keyword in name_lower:
-            return color
-    # Hash determinístico como fallback
-    idx = sum(ord(c) for c in name_lower) % len(_FALLBACK_COLORS)
-    return _FALLBACK_COLORS[idx]
+def _infer_color(name: str) -> str:
+    low = name.lower()
+    for kw, c in _COLOR_MAP.items():
+        if kw in low:
+            return c
+    return _FALLBACK[sum(ord(c) for c in low) % len(_FALLBACK)]
 
 
-def _make_avatar(name: str) -> str:
-    """Genera iniciales para el avatar circular a partir del nombre."""
+def _avatar(name: str) -> str:
     parts = name.strip().split()
-    if len(parts) >= 2:
-        return (parts[0][0] + parts[-1][0]).upper()
-    return name[:2].upper()
+    return (parts[0][0] + parts[-1][0]).upper() if len(parts) >= 2 else name[:2].upper()
 
 
-def _create_activity_item(payload: WebhookPayload) -> ActivityItem:
-    """Construye un ActivityItem a partir del payload del webhook."""
-    color = payload.project_color or _infer_project_color(payload.project)
+def _make_item(payload: WebhookPayload) -> ActivityItem:
     return ActivityItem(
         id=str(uuid.uuid4())[:8],
         developer=payload.developer,
-        developer_avatar=_make_avatar(payload.developer),
+        developer_avatar=_avatar(payload.developer),
         project=payload.project,
-        project_color=color,
+        project_color=payload.project_color or _infer_color(payload.project),
         activity=payload.activity,
         timestamp=datetime.now(timezone.utc).isoformat(),
         impact=payload.impact,
@@ -189,12 +148,11 @@ def _create_activity_item(payload: WebhookPayload) -> ActivityItem:
 
 
 # ──────────────────────────────────────────────
-# Carga y búsqueda en graph.json
+# Graph JSON — Carga y búsqueda
 # ──────────────────────────────────────────────
 
 
 def load_graph() -> dict:
-    """Carga graph.json desde disco. Retorna dict vacío si no existe."""
     if not GRAPH_JSON_PATH.exists():
         return {"nodes": [], "hyperedges": [], "links": []}
     try:
@@ -204,210 +162,150 @@ def load_graph() -> dict:
         return {"nodes": [], "hyperedges": [], "links": []}
 
 
-def search_graph_context(query: str, graph: dict, top_k: int = 5) -> list[dict]:
+def search_graph_context(query: str, graph: dict, top_k: int = 8) -> list[dict]:
     """
-    Busca nodos e hiper-aristas relevantes mediante coincidencia
-    de palabras clave en labels e IDs.
-
-    Retorna lista de dicts con: type, id, label, score, + campos específicos.
+    Búsqueda por palabras clave en IDs, labels y source_files
+    de nodos e hiper-aristas del grafo.
+    Incluye bigramas para coincidencias más precisas.
     """
-    # Normalizar y tokenizar el query
-    query_lower = query.lower()
-    words = set(re.findall(r"\w+", query_lower))
-    # También agregar bigramas para mejor coincidencia
-    tokens = list(words)
+    tokens = re.findall(r"\w+", query.lower())
+    words = set(tokens)
     for i in range(len(tokens) - 1):
         words.add(f"{tokens[i]} {tokens[i+1]}")
 
     results: list[dict] = []
 
-    # Buscar en hiper-aristas
     for edge in graph.get("hyperedges", []):
-        label = (edge.get("label") or "").lower()
-        edge_id = (edge.get("id") or "").lower()
-        source = (edge.get("source_file") or "").lower()
-        edge_text = f"{label} {edge_id} {source}"
-        score = sum(1 for w in words if w in edge_text)
+        text = " ".join([
+            (edge.get("label") or ""),
+            (edge.get("id") or ""),
+            (edge.get("source_file") or ""),
+            (edge.get("relation") or ""),
+        ]).lower()
+        score = sum(1 for w in words if w in text)
         if score > 0:
-            results.append(
-                {
-                    "type": "hyperedge",
-                    "id": edge.get("id"),
-                    "label": edge.get("label"),
-                    "nodes": edge.get("nodes", []),
-                    "relation": edge.get("relation"),
-                    "confidence": edge.get("confidence"),
-                    "source_file": edge.get("source_file"),
-                    "score": score,
-                }
-            )
+            results.append({
+                "type": "hyperedge",
+                "id": edge.get("id"),
+                "label": edge.get("label"),
+                "nodes": edge.get("nodes", []),
+                "relation": edge.get("relation"),
+                "confidence": edge.get("confidence"),
+                "source_file": edge.get("source_file"),
+                "score": score,
+            })
 
-    # Buscar en nodos
     for node in graph.get("nodes", []):
-        node_label = (node.get("label") or "").lower()
-        node_id = (node.get("id") or "").lower()
-        node_cat = (node.get("category") or "").lower()
-        node_text = f"{node_label} {node_id} {node_cat}"
-        score = sum(1 for w in words if w in node_text)
+        text = " ".join([
+            (node.get("label") or ""),
+            (node.get("id") or ""),
+            (node.get("category") or ""),
+        ]).lower()
+        score = sum(1 for w in words if w in text)
         if score > 0:
-            results.append(
-                {
-                    "type": "node",
-                    "id": node.get("id"),
-                    "label": node.get("label"),
-                    "category": node.get("category"),
-                    "score": score,
-                }
-            )
+            results.append({
+                "type": "node",
+                "id": node.get("id"),
+                "label": node.get("label"),
+                "category": node.get("category"),
+                "score": score,
+            })
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:top_k]
 
 
-# ──────────────────────────────────────────────
-# PLACEHOLDER: Integración con API de Gemini
-# ──────────────────────────────────────────────
-
-# ┌──────────────────────────────────────────────────────────────────────────┐
-# │                                                                          │
-# │  GEMINI API — INSTRUCCIONES DE INTEGRACIÓN                              │
-# │  ═════════════════════════════════════════                               │
-# │                                                                          │
-# │  1. Instalar SDK:                                                        │
-# │     pip install google-generativeai                                      │
-# │                                                                          │
-# │  2. Inyectar API Key:                                                    │
-# │     - Opción A: Variable de entorno GEMINI_API_KEY                      │
-# │     - Opción B: Reemplazar directamente el valor en GEMINI_API_KEY      │
-# │                                                                          │
-# │  3. Descomentar el bloque marcado como [GEMINI-ACTIVE] abajo            │
-# │                                                                          │
-# │  4. En _generate_response(), cambiar la línea:                          │
-# │     response_text = _build_local_response(prompt, context)              │
-# │     por:                                                                 │
-# │     response_text = await _call_gemini_api(prompt, context)             │
-# │                                                                          │
-# │  5. En /api/chat, cambiar el campo source:                              │
-# │     "source": "graph-local"  →  "source": "gemini-api"                 │
-# │                                                                          │
-# └──────────────────────────────────────────────────────────────────────────┘
-
-GEMINI_API_KEY = ""  # ← INYECTAR API KEY AQUÍ (o usar env var)
-GEMINI_MODEL = "gemini-2.0-flash"
-
-# ── [GEMINI-ACTIVE] Descomentar este bloque para activar Gemini ──
-#
-# import os
-# import httpx
-#
-# async def _call_gemini_api(prompt: str, context: list[dict]) -> str:
-#     """
-#     Llamada HTTP real a la API de Gemini.
-#
-#     Construye un prompt del sistema con el contexto del grafo,
-#     envía el mensaje del usuario y retorna la respuesta generativa.
-#     """
-#     api_key = os.getenv("GEMINI_API_KEY", GEMINI_API_KEY)
-#     if not api_key:
-#         return _build_local_response(prompt, context)
-#
-#     # Construir contexto formateado para el prompt del sistema
-#     context_text = _format_context_for_prompt(context)
-#
-#     system_prompt = (
-#         "Eres un asistente experto en el knowledge graph de Graphify. "
-#         "Responde en español. Usa el contexto proporcionado del grafo "
-#         "para dar respuestas precisas y bien estructuradas. "
-#         "Si el contexto no es suficiente, indícalo claramente.\n\n"
-#         f"Contexto del grafo:\n{context_text}"
-#     )
-#
-#     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}"
-#     payload = {
-#         "system_instruction": {"parts": [{"text": system_prompt}]},
-#         "contents": [{"parts": [{"text": prompt}]}],
-#         "generationConfig": {
-#             "temperature": 0.4,
-#             "maxOutputTokens": 1024,
-#         },
-#     }
-#
-#     async with httpx.AsyncClient(timeout=30) as client:
-#         response = await client.post(url, json=payload)
-#         response.raise_for_status()
-#         data = response.json()
-#
-#     # Extraer texto de la respuesta
-#     try:
-#         return data["candidates"][0]["content"]["parts"][0]["text"]
-#     except (KeyError, IndexError):
-#         return "La API de Gemini no retornó una respuesta válida."
-#
-# ── Fin [GEMINI-ACTIVE] ──
-
-
-def _format_context_for_prompt(context: list[dict]) -> str:
-    """Formatea el contexto del grafo para incluirlo en el prompt de Gemini."""
+def _format_context(context: list[dict]) -> str:
+    """Formatea el contexto para inyectarlo en el prompt de Gemini."""
     if not context:
-        return "Sin contexto relevante encontrado."
+        return "Sin contexto relevante encontrado en el knowledge graph."
     lines = []
-    for item in context:
-        if item["type"] == "hyperedge":
+    for c in context:
+        if c["type"] == "hyperedge":
             lines.append(
-                f"- Hiper-arista: {item['label']} (relación: {item.get('relation')}, "
-                f"confianza: {item.get('confidence')}, nodos: {item.get('nodes')})"
+                f"- Hiper-arista: \"{c['label']}\" | Relación: {c.get('relation')} | "
+                f"Confianza: {c.get('confidence')} | Nodos: {c.get('nodes')} | "
+                f"Fuente: {c.get('source_file')}"
             )
         else:
-            lines.append(f"- Nodo: {item['label']} (categoría: {item.get('category')})")
+            lines.append(f"- Nodo: \"{c['label']}\" | ID: {c['id']} | Categoría: {c.get('category')}")
     return "\n".join(lines)
 
 
-def _build_local_response(prompt: str, context: list[dict]) -> str:
+# ──────────────────────────────────────────────
+# Gemini API — Integración Real
+# ──────────────────────────────────────────────
+
+
+async def _call_gemini(prompt: str, context: list[dict]) -> tuple[str, str]:
     """
-    Respuesta local basada en el contexto del grafo.
-    Se usa mientras la API de Gemini no está activa.
+    Llama a la API de Gemini con contexto del knowledge graph.
+
+    Retorna: (respuesta_texto, fuente_usada)
+    - Si Gemini está configurado → respuesta generativa, fuente "gemini-api"
+    - Si no hay API Key → respuesta local basada en contexto, fuente "graph-local"
     """
+    context_text = _format_context(context)
+
+    # ── Sin API Key → respuesta local ──
+    if not GEMINI_API_KEY:
+        return _local_response(prompt, context), "graph-local"
+
+    # ── Con API Key → llamada real a Gemini ──
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel(GEMINI_MODEL)
+
+        system_prompt = (
+            "Eres el asistente experto de Graphify Core, una plataforma de knowledge graph. "
+            "Respondes en español de forma clara, precisa y bien estructurada. "
+            "Usas el contexto del grafo proporcionado para fundamentar tus respuestas. "
+            "Si el contexto no es suficiente para responder, lo indicas claramente y sugieres "
+            "términos de búsqueda alternativos basados en lo que sí conoces del grafo.\n\n"
+            f"Contexto del knowledge graph:\n{context_text}"
+        )
+
+        response = await model.generate_content_async(
+            f"{system_prompt}\n\nPregunta del usuario: {prompt}"
+        )
+
+        return response.text, "gemini-api"
+
+    except Exception as e:
+        # Si Gemini falla, caer a respuesta local con aviso
+        local = _local_response(prompt, context)
+        fallback = (
+            f"{local}\n\n"
+            f"⚠️ _Gemini no disponible ({type(e).__name__}). "
+            f"Mostrando resultado local._"
+        )
+        return fallback, "gemini-fallback"
+
+
+def _local_response(prompt: str, context: list[dict]) -> str:
+    """Respuesta de respaldo basada solo en el contexto del grafo local."""
     if not context:
         return (
-            f'No encontré información relevante en el knowledge graph '
-            f'para: **"{prompt}"**.\n\n'
-            f'Prueba con términos presentes en el grafo como: '
-            f'*press, espalda, hipertrofia, recuperación, rutina, '
+            f'No encontré información relevante para: **"{prompt}"**.\n\n'
+            f'Prueba con: *press, espalda, hipertrofia, recuperación, rutina, '
             f'sobrecarga, pierna, hombro*.\n\n'
-            f'_Activa la API de Gemini para respuestas generativas._'
+            f'_Configura GEMINI_API_KEY para respuestas generativas._'
         )
 
     lines = [f"Encontré **{len(context)}** coincidencia(s) en el knowledge graph:\n"]
-    for item in context:
-        if item["type"] == "hyperedge":
+    for c in context:
+        if c["type"] == "hyperedge":
             lines.append(
-                f"- 🔗 **{item['label']}** ({item.get('relation', 'N/A')}) "
-                f"— Confianza: {item.get('confidence', 'N/A')} "
-                f"| Fuente: `{item.get('source_file', 'N/A')}`"
+                f"- 🔗 **{c['label']}** ({c.get('relation', 'N/A')}) "
+                f"— Confianza: {c.get('confidence', 'N/A')} "
+                f"| Fuente: `{c.get('source_file', 'N/A')}`"
             )
         else:
-            lines.append(
-                f"- 📌 **{item['label']}** — Categoría: {item.get('category', 'N/A')}"
-            )
-    lines.append(
-        "\n_Contexto extraído de graph.json. "
-        "Con la API de Gemini activa, la respuesta será generativa._"
-    )
+            lines.append(f"- 📌 **{c['label']}** — Categoría: {c.get('category', 'N/A')}")
+    lines.append("\n_Contexto de graph.json. Con Gemini activo la respuesta será generativa._")
     return "\n".join(lines)
-
-
-async def _generate_response(prompt: str, context: list[dict]) -> str:
-    """
-    Genera la respuesta del chatbot.
-
-    Por defecto usa la respuesta local basada en el contexto del grafo.
-    Para activar Gemini:
-      1. Descomentar el bloque [GEMINI-ACTIVE] arriba.
-      2. Inyectar la API Key en GEMINI_API_KEY.
-      3. Reemplazar la línea de abajo con:
-         return await _call_gemini_api(prompt, context)
-    """
-    return _build_local_response(prompt, context)
 
 
 # ──────────────────────────────────────────────
@@ -417,18 +315,13 @@ async def _generate_response(prompt: str, context: list[dict]) -> str:
 
 @app.get("/")
 async def serve_frontend():
-    """Sirve el frontend SPA."""
     if FRONTEND_PATH.exists():
         return FileResponse(FRONTEND_PATH, media_type="text/html")
-    return JSONResponse(
-        {"error": "index.html no encontrado en la raíz del proyecto."},
-        status_code=404,
-    )
+    return JSONResponse({"error": "index.html no encontrado"}, status_code=404)
 
 
-@app.get("/graph")
+@app.get("/graph-view")
 async def serve_graph():
-    """Sirve el grafo interactivo real generado por Graphify."""
     if GRAPH_HTML_PATH.exists():
         return FileResponse(GRAPH_HTML_PATH, media_type="text/html")
     return JSONResponse(
@@ -439,45 +332,25 @@ async def serve_graph():
 
 @app.get("/api/activity")
 async def get_activity():
-    """Retorna el historial de actividades reales (más recientes primero)."""
     return [item.model_dump() for item in reversed(activity_log)]
 
 
 @app.post("/api/webhook/git")
 async def webhook_git(payload: WebhookPayload):
     """
-    Webhook de Git — Recibe datos reales y los propaga en tiempo real.
+    Recibe datos reales y los propaga en tiempo real vía SSE.
 
-    Ejemplo con curl:
-    ─────────────────
     curl -X POST http://localhost:8000/api/webhook/git \
       -H "Content-Type: application/json" \
-      -d '{
-        "developer": "Juan Pérez",
-        "project": "Graphify API",
-        "activity": "Implementó endpoint de búsqueda semántica en el grafo",
-        "impact": "Alto"
-      }'
-
-    El endpoint:
-    1. Valida el payload con Pydantic.
-    2. Crea el ActivityItem con avatar y color auto-generados.
-    3. Lo almacena en el log en memoria.
-    4. Lo transmite a todos los clientes SSE conectados.
+      -d '{"developer":"Juan Pérez","project":"Graphify API","activity":"Implementó búsqueda semántica","impact":"Alto"}'
     """
-    item = _create_activity_item(payload)
-
-    # Almacenar
+    item = _make_item(payload)
     activity_log.append(item)
-    if len(activity_log) > MAX_ACTIVITY_LOG:
+    if len(activity_log) > MAX_LOG:
         activity_log.pop(0)
-
-    # Broadcast a clientes SSE
     _broadcast(item.model_dump())
-
     return {
         "status": "ok",
-        "message": "Actividad registrada y transmitida",
         "id": item.id,
         "sse_clients": len(sse_clients),
     }
@@ -485,18 +358,9 @@ async def webhook_git(payload: WebhookPayload):
 
 @app.get("/api/stream")
 async def stream_activity(request: Request):
-    """
-    SSE (Server-Sent Events) — Escucha activa de nuevas actividades.
+    """SSE — Solo retransmite datos reales del webhook."""
+    from sse_starlette.sse import EventSourceResponse
 
-    El frontend abre una conexión persistente a este endpoint.
-    Cada vez que POST /api/webhook/git recibe datos reales,
-    este endpoint los transmite al instante a todos los clientes.
-
-    No genera datos falsos. Solo retransmite lo que llega por el webhook.
-    """
-    from sse_starlette.sse import EventSourceResponse  # type: ignore
-
-    # Crear queue para este cliente
     queue: asyncio.Queue = asyncio.Queue(maxsize=64)
     sse_clients.append(queue)
 
@@ -506,14 +370,11 @@ async def stream_activity(request: Request):
                 if await request.is_disconnected():
                     break
                 try:
-                    # Esperar datos con timeout para detectar desconexión
                     data = await asyncio.wait_for(queue.get(), timeout=15)
                     yield {"event": "activity", "data": data}
                 except asyncio.TimeoutError:
-                    # Heartbeat para mantener la conexión viva
                     yield {"event": "ping", "data": ""}
         finally:
-            # Limpiar queue al desconectarse
             if queue in sse_clients:
                 sse_clients.remove(queue)
 
@@ -524,24 +385,17 @@ async def stream_activity(request: Request):
 async def chat_endpoint(payload: ChatMessage):
     """
     Chatbot Graph-RAG.
-
-    Flujo:
-    1. Recibe el mensaje del usuario.
-    2. Carga graph.json real desde disco.
-    3. Busca contexto relevante por palabras clave.
-    4. Genera respuesta (local o via Gemini si está activado).
-    5. Retorna respuesta + contexto + metadatos.
+    Lee graph.json real → busca contexto → envía a Gemini (o responde local).
     """
     graph = load_graph()
     context = search_graph_context(payload.message, graph)
 
-    response_text = await _generate_response(payload.message, context)
+    response_text, source = await _call_gemini(payload.message, context)
 
     return {
         "response": response_text,
-        "context_used": context,
         "context_count": len(context),
-        "source": "graph-local",  # Cambiar a "gemini-api" al activar Gemini
+        "source": source,
         "graph_nodes": len(graph.get("nodes", [])),
         "graph_edges": len(graph.get("hyperedges", [])),
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -550,11 +404,10 @@ async def chat_endpoint(payload: ChatMessage):
 
 @app.get("/api/health")
 async def health_check():
-    """Health check del servicio."""
     graph = load_graph()
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "graph_loaded": bool(graph.get("nodes") or graph.get("hyperedges")),
         "graph_nodes": len(graph.get("nodes", [])),
         "graph_edges": len(graph.get("hyperedges", [])),
@@ -564,17 +417,6 @@ async def health_check():
     }
 
 
-# ──────────────────────────────────────────────
-# Punto de entrada
-# ──────────────────────────────────────────────
-
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info",
-    )
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
