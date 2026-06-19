@@ -857,10 +857,20 @@ Events:       Just the push event</code>
 
         // Atajos de teclado: Ctrl+K o / para buscar, Escape para limpiar
         document.addEventListener('keydown',function(e){
-            if((e.ctrlKey&&e.key==='k')||(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName))){
+            const inInput=['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
+            // Ctrl+K: siempre abre búsqueda
+            if(e.ctrlKey&&e.key==='k'){
                 e.preventDefault();
                 $searchInput.focus();
+                return;
             }
+            // / : solo si NO estamos en ningún campo de texto
+            if(e.key==='/'&&!inInput){
+                e.preventDefault();
+                $searchInput.focus();
+                return;
+            }
+            // Escape: limpiar búsqueda
             if(e.key==='Escape'&&document.activeElement===$searchInput){
                 window.clearSearch();
                 $searchInput.blur();

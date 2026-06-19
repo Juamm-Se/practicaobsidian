@@ -256,6 +256,15 @@ def parse_vault() -> dict:
     return {"nodes": nodes, "edges": edges}
 
 
+def _strip_frontmatter(text: str) -> str:
+    """Elimina el bloque YAML frontmatter (--- ... ---) de una nota."""
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            return text[end + 3:].strip()
+    return text
+
+
 def _get_vault_text_context(query: str, top_k: int = 5) -> str:
     """
     Busca notas relevantes del Vault para usar como contexto
@@ -278,8 +287,8 @@ def _get_vault_text_context(query: str, top_k: int = 5) -> str:
         score = sum(1 for t in tokens if t in text_lower)
 
         if score > 0:
-            # Extracto: primeras 300 chars relevantes
-            excerpt = content[:500].strip()
+            # Extracto limpio: sin frontmatter, más contexto para Gemini
+            excerpt = _strip_frontmatter(content[:800]).strip()
             scored_notes.append((score, title, excerpt))
 
     scored_notes.sort(key=lambda x: x[0], reverse=True)
@@ -314,12 +323,17 @@ async def _call_gemini(prompt: str, context: str) -> tuple[str, str]:
         from google import genai
         client = genai.Client(api_key=GEMINI_API_KEY)
         system_prompt = (
-            "Eres el asistente experto del Obsidian & Git Intelligence Center, "
-            "un sistema de gestión de conocimiento basado en Obsidian Vault. "
-            "Las notas del Vault están conectadas como un knowledge graph. "
-            "Respondes en español de forma clara, precisa y bien estructurada. "
-            "Usas el contexto de las notas para fundamentar tus respuestas. "
-            "Si el contexto no es suficiente, sugieres términos alternativos basados en las notas del Vault.\n\n"
+            "Eres el asistente de IA oficial del Obsidian & Git Intelligence Center. "
+            "Responde a la pregunta del usuario de forma ejecutiva, concisa y natural, "
+            "basándote ESTRICTAMENTE en el siguiente contexto extraído de las notas de Obsidian del usuario. "
+            "Si el contexto no contiene la información solicitada, indícalo amablemente y sugiere "
+            "qué notas del Vault podrían ser relevantes.\n\n"
+            "Reglas:\n"
+            "- Responde SIEMPRE en español.\n"
+            "- Usa Markdown para estructurar tu respuesta (títulos **##**, listas **-**, negritas **texto**).\n"
+            "- Cita las notas del Vault de donde extraes la información.\n"
+            "- No inventes información que no esté en el contexto.\n"
+            "- Sé directo, no repitas la pregunta del usuario.\n\n"
             f"Contexto de las notas del Vault:\n{context}"
         )
         response = client.models.generate_content(
@@ -341,7 +355,7 @@ def _local_response(prompt: str, context: str) -> str:
     return (
         f"Encontré contexto en el Vault para: **{prompt}**\n\n"
         f"{context}\n\n"
-        f"_Contexto del Vault local. Con Gemini activo la respuesta será generativa._"
+        f"_⚠️ Contexto crudo del Vault. Configura GEMINI_API_KEY para respuestas inteligentes con Gemini._"
     )
 
 
