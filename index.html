@@ -212,7 +212,9 @@
         .filter-card { background:var(--bg-raised); border:1px solid var(--brd); border-radius:10px; padding:12px 14px; transition:border-color 0.2s, box-shadow 0.2s; }
         .filter-card:hover { border-color:var(--brd-light); }
         .filter-card:focus-within { border-color:rgba(99,102,241,0.30); box-shadow:0 0 0 1px rgba(99,102,241,0.08); }
-        select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+        select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; color-scheme:dark; }
+        .dark select { color-scheme:dark; }
+        .light select { color-scheme:light; }
 
         .dark input[type="date"]{color-scheme:dark} .light input[type="date"]{color-scheme:light}
 
@@ -422,23 +424,27 @@
                             <label class="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.08em] font-semibold mb-2" style="color:var(--text-5)">
                                 <i data-lucide="git-branch" class="w-3 h-3"></i> Repositorio
                             </label>
-                            <select id="filter-repo" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)"><option value="">Todos los repos</option></select>
+                            <select id="filter-repo" class="w-full text-[12px] font-medium cursor-pointer bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg px-3 py-2">
+                                <option value="" class="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">Todos los repos</option>
+                            </select>
                         </div>
                         <div class="filter-card">
                             <label class="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.08em] font-semibold mb-2" style="color:var(--text-5)">
                                 <i data-lucide="user" class="w-3 h-3"></i> Autor
                             </label>
-                            <select id="filter-author" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)"><option value="">Todos los autores</option></select>
+                            <select id="filter-author" class="w-full text-[12px] font-medium cursor-pointer bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg px-3 py-2">
+                                <option value="" class="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">Todos los autores</option>
+                            </select>
                         </div>
                         <div class="filter-card">
                             <label class="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.08em] font-semibold mb-2" style="color:var(--text-5)">
                                 <i data-lucide="signal" class="w-3 h-3"></i> Impacto
                             </label>
-                            <select id="filter-impact" class="w-full bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer" style="color:var(--text-2)">
-                                <option value="">Todos</option>
-                                <option value="Alto">Alto</option>
-                                <option value="Medio">Medio</option>
-                                <option value="Bajo">Bajo</option>
+                            <select id="filter-impact" class="w-full text-[12px] font-medium cursor-pointer bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg px-3 py-2">
+                                <option value="" class="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">Todos</option>
+                                <option value="Alto" class="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">Alto</option>
+                                <option value="Medio" class="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">Medio</option>
+                                <option value="Bajo" class="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">Bajo</option>
                             </select>
                         </div>
                     </div>
@@ -696,8 +702,9 @@ Events:       Just the push event</code>
         };
 
         // ── Filters ────────────────────────────────
-        function addRepoOption(n){if(knownRepos.has(n))return;knownRepos.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;$filterRepo.appendChild(o)}
-        function addAuthorOption(n){if(knownAuthors.has(n))return;knownAuthors.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;$filterAuthor.appendChild(o)}
+        const optClasses='bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100';
+        function addRepoOption(n){if(knownRepos.has(n))return;knownRepos.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;o.className=optClasses;$filterRepo.appendChild(o)}
+        function addAuthorOption(n){if(knownAuthors.has(n))return;knownAuthors.add(n);const o=document.createElement('option');o.value=n;o.textContent=n;o.className=optClasses;$filterAuthor.appendChild(o)}
 
         function applyFilters(){
             const r=$filterRepo.value, a=$filterAuthor.value, imp=$filterImpact.value;
