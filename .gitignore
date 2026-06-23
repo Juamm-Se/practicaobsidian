@@ -12,3 +12,6 @@ Thumbs.db
 desktop.ini
 __pycache__/
 commits.json
+
+# Environment variables (API keys)
+.env
